@@ -19,3 +19,7 @@
 *.exe
 *.out
 *.app
+
+# Xcode user configure
+xcode/YukinoDB.xcodeproj/project.xcworkspace/xcuserdata
+xcode/YukinoDB.xcodeproj/xcuserdata

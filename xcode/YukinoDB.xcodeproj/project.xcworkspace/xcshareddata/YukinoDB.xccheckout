@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>IDESourceControlProjectFavoriteDictionaryKey</key>
+	<false/>
+	<key>IDESourceControlProjectIdentifier</key>
+	<string>B920EA9C-2CE8-4E65-BE81-12BBB19AEF45</string>
+	<key>IDESourceControlProjectName</key>
+	<string>YukinoDB</string>
+	<key>IDESourceControlProjectOriginsDictionary</key>
+	<dict>
+		<key>DACD6A3D-4ECB-440E-8CCF-E3A86D50C060</key>
+		<string>ssh://github.com/YukinoDB/YukinoDB.git</string>
+	</dict>
+	<key>IDESourceControlProjectPath</key>
+	<string>YukinoDB/YukinoDB.xcodeproj/project.xcworkspace</string>
+	<key>IDESourceControlProjectRelativeInstallPathDictionary</key>
+	<dict>
+		<key>DACD6A3D-4ECB-440E-8CCF-E3A86D50C060</key>
+		<string>../../..</string>
+	</dict>
+	<key>IDESourceControlProjectURL</key>
+	<string>ssh://github.com/YukinoDB/YukinoDB.git</string>
+	<key>IDESourceControlProjectVersion</key>
+	<integer>110</integer>
+	<key>IDESourceControlProjectWCCIdentifier</key>
+	<string>DACD6A3D-4ECB-440E-8CCF-E3A86D50C060</string>
+	<key>IDESourceControlProjectWCConfigurations</key>
+	<array>
+		<dict>
+			<key>IDESourceControlRepositoryExtensionIdentifierKey</key>
+			<string>public.vcs.git</string>
+			<key>IDESourceControlWCCIdentifierKey</key>
+			<string>DACD6A3D-4ECB-440E-8CCF-E3A86D50C060</string>
+			<key>IDESourceControlWCCName</key>
+			<string>yukino</string>
+		</dict>
+	</array>
+</dict>
+</plist>
