@@ -6,6 +6,10 @@
 	objectVersion = 46;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		2380F6271A106F3B00B1EA97 /* base_test.cc in Sources */ = {isa = PBXBuildFile; fileRef = 2380F6261A106F3B00B1EA97 /* base_test.cc */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXCopyFilesBuildPhase section */
 		23BF0D0F19A742EE0040E1CE /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
@@ -19,8 +23,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		23BF0D0A19A741FD0040E1CE /* base.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = base.h; sourceTree = "<group>"; };
-		23BF0D0B19A741FD0040E1CE /* base_test.cc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = base_test.cc; path = ../../src/base/base_test.cc; sourceTree = "<group>"; };
+		2380F6251A106F3200B1EA97 /* base.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = base.h; path = src/base/base.h; sourceTree = SOURCE_ROOT; };
+		2380F6261A106F3B00B1EA97 /* base_test.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = base_test.cc; path = src/base/base_test.cc; sourceTree = SOURCE_ROOT; };
 		23BF0D1119A742EE0040E1CE /* unittest */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = unittest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -57,7 +61,7 @@
 		23BF0D0919A741FD0040E1CE /* base */ = {
 			isa = PBXGroup;
 			children = (
-				23BF0D0A19A741FD0040E1CE /* base.h */,
+				2380F6251A106F3200B1EA97 /* base.h */,
 			);
 			path = base;
 			sourceTree = "<group>";
@@ -80,7 +84,7 @@
 		23BF0D1319A742EE0040E1CE /* unittest */ = {
 			isa = PBXGroup;
 			children = (
-				23BF0D0B19A741FD0040E1CE /* base_test.cc */,
+				2380F6261A106F3B00B1EA97 /* base_test.cc */,
 			);
 			path = unittest;
 			sourceTree = "<group>";
@@ -111,7 +115,7 @@
 		23BF0D0219A7410E0040E1CE /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0510;
+				LastUpgradeCheck = 0610;
 			};
 			buildConfigurationList = 23BF0D0519A7410E0040E1CE /* Build configuration list for PBXProject "YukinoDB" */;
 			compatibilityVersion = "Xcode 3.2";
@@ -135,6 +139,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2380F6271A106F3B00B1EA97 /* base_test.cc in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -144,6 +149,7 @@
 		23BF0D0619A7410E0040E1CE /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ONLY_ACTIVE_ARCH = YES;
 			};
 			name = Debug;
 		};
@@ -244,6 +250,7 @@
 				23BF0D1A19A742EE0040E1CE /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

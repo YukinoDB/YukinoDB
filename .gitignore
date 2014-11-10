@@ -21,5 +21,6 @@
 *.app
 
 # Xcode user configure
-xcode/YukinoDB.xcodeproj/project.xcworkspace/xcuserdata
-xcode/YukinoDB.xcodeproj/xcuserdata
+YukinoDB.xcodeproj/project.xcworkspace/xcshareddata/
+YukinoDB.xcodeproj/project.xcworkspace/xcuserdata
+YukinoDB.xcodeproj/xcuserdata
