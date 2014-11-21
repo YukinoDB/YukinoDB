@@ -1,5 +1,6 @@
 #include <stdio.h>
+#include "gtest/gtest.h"
 
-int main(int argc, char *argv[]) {
-    return printf("Hello, World!\n");
+TEST(BasicTest, Sanity) {
+    ASSERT_EQ(0, 0) << "should ok!";
 }

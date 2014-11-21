@@ -24,3 +24,7 @@
 YukinoDB.xcodeproj/project.xcworkspace/xcshareddata/
 YukinoDB.xcodeproj/project.xcworkspace/xcuserdata
 YukinoDB.xcodeproj/xcuserdata
+third_party/glog/xcode/glog.xcodeproj/xcuserdata
+third_party/glog/xcode/glog.xcodeproj/project.xcworkspace
+third_party/gtest/xcode/gtest.xcodeproj/xcuserdata
+third_party/gtest/xcode/gtest.xcodeproj/project.xcworkspace/xcuserdata

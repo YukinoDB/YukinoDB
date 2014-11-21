@@ -7,8 +7,91 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		23100A0C1A1F2D1700DE06DD /* libgtest_main.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 23FE66CD1A1F206B005C7568 /* libgtest_main.a */; };
+		23100A0D1A1F2D1700DE06DD /* libgtest.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 23FE66CB1A1F206B005C7568 /* libgtest.a */; };
 		2380F6271A106F3B00B1EA97 /* base_test.cc in Sources */ = {isa = PBXBuildFile; fileRef = 2380F6261A106F3B00B1EA97 /* base_test.cc */; };
+		23FE66DB1A1F2284005C7568 /* libglog.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 23FE66B91A1F2051005C7568 /* libglog.a */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		23FE66B81A1F2051005C7568 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 23FE66B31A1F2051005C7568 /* glog.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 238B4E371A1F1660006AA916;
+			remoteInfo = libglog;
+		};
+		23FE66BA1A1F2051005C7568 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 23FE66B31A1F2051005C7568 /* glog.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 238B4EAC1A1F1B40006AA916;
+			remoteInfo = glog;
+		};
+		23FE66C81A1F206B005C7568 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 23FE66BC1A1F206B005C7568 /* gtest.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 4539C8FF0EC27F6400A70F4C;
+			remoteInfo = "gtest-framework";
+		};
+		23FE66CA1A1F206B005C7568 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 23FE66BC1A1F206B005C7568 /* gtest.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 40C848FA101A209C0083642A;
+			remoteInfo = "gtest-static";
+		};
+		23FE66CC1A1F206B005C7568 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 23FE66BC1A1F206B005C7568 /* gtest.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 40C8490B101A217E0083642A;
+			remoteInfo = "gtest_main-static";
+		};
+		23FE66CE1A1F206B005C7568 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 23FE66BC1A1F206B005C7568 /* gtest.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 40899F430FFA7184000B29AE;
+			remoteInfo = "gtest_unittest-framework";
+		};
+		23FE66D01A1F206B005C7568 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 23FE66BC1A1F206B005C7568 /* gtest.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 40C84987101A36850083642A;
+			remoteInfo = "gtest_unittest-static";
+		};
+		23FE66D21A1F206B005C7568 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 23FE66BC1A1F206B005C7568 /* gtest.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 4089A0130FFACEFC000B29AE;
+			remoteInfo = "sample1_unittest-framework";
+		};
+		23FE66D41A1F206B005C7568 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 23FE66BC1A1F206B005C7568 /* gtest.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 40C84997101A36A60083642A;
+			remoteInfo = "sample1_unittest-static";
+		};
+		23FE66D61A1F2084005C7568 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 23FE66BC1A1F206B005C7568 /* gtest.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = 8D07F2BC0486CC7A007CD1D0;
+			remoteInfo = "gtest-framework";
+		};
+		23FE66D81A1F208E005C7568 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 23FE66B31A1F2051005C7568 /* glog.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = 238B4EAB1A1F1B40006AA916;
+			remoteInfo = glog;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
 		23BF0D0F19A742EE0040E1CE /* CopyFiles */ = {
@@ -26,6 +109,8 @@
 		2380F6251A106F3200B1EA97 /* base.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = base.h; path = src/base/base.h; sourceTree = SOURCE_ROOT; };
 		2380F6261A106F3B00B1EA97 /* base_test.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = base_test.cc; path = src/base/base_test.cc; sourceTree = SOURCE_ROOT; };
 		23BF0D1119A742EE0040E1CE /* unittest */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = unittest; sourceTree = BUILT_PRODUCTS_DIR; };
+		23FE66B31A1F2051005C7568 /* glog.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = glog.xcodeproj; path = third_party/glog/xcode/glog.xcodeproj; sourceTree = "<group>"; };
+		23FE66BC1A1F206B005C7568 /* gtest.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = gtest.xcodeproj; path = third_party/gtest/xcode/gtest.xcodeproj; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -33,6 +118,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				23100A0C1A1F2D1700DE06DD /* libgtest_main.a in Frameworks */,
+				23100A0D1A1F2D1700DE06DD /* libgtest.a in Frameworks */,
+				23FE66DB1A1F2284005C7568 /* libglog.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -42,6 +130,8 @@
 		23BF0D0119A7410E0040E1CE = {
 			isa = PBXGroup;
 			children = (
+				23FE66BC1A1F206B005C7568 /* gtest.xcodeproj */,
+				23FE66B31A1F2051005C7568 /* glog.xcodeproj */,
 				23BF0D0819A741FD0040E1CE /* src */,
 				23BF0D1319A742EE0040E1CE /* unittest */,
 				23BF0D1219A742EE0040E1CE /* Products */,
@@ -89,6 +179,29 @@
 			path = unittest;
 			sourceTree = "<group>";
 		};
+		23FE66B41A1F2051005C7568 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				23FE66B91A1F2051005C7568 /* libglog.a */,
+				23FE66BB1A1F2051005C7568 /* glog.framework */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		23FE66BD1A1F206B005C7568 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				23FE66C91A1F206B005C7568 /* gtest.framework */,
+				23FE66CB1A1F206B005C7568 /* libgtest.a */,
+				23FE66CD1A1F206B005C7568 /* libgtest_main.a */,
+				23FE66CF1A1F206B005C7568 /* gtest_unittest-framework */,
+				23FE66D11A1F206B005C7568 /* gtest_unittest */,
+				23FE66D31A1F206B005C7568 /* sample1_unittest-framework */,
+				23FE66D51A1F206B005C7568 /* sample1_unittest-static */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -103,6 +216,8 @@
 			buildRules = (
 			);
 			dependencies = (
+				23FE66D91A1F208E005C7568 /* PBXTargetDependency */,
+				23FE66D71A1F2084005C7568 /* PBXTargetDependency */,
 			);
 			name = unittest;
 			productName = unittest;
@@ -127,12 +242,88 @@
 			mainGroup = 23BF0D0119A7410E0040E1CE;
 			productRefGroup = 23BF0D1219A742EE0040E1CE /* Products */;
 			projectDirPath = "";
+			projectReferences = (
+				{
+					ProductGroup = 23FE66B41A1F2051005C7568 /* Products */;
+					ProjectRef = 23FE66B31A1F2051005C7568 /* glog.xcodeproj */;
+				},
+				{
+					ProductGroup = 23FE66BD1A1F206B005C7568 /* Products */;
+					ProjectRef = 23FE66BC1A1F206B005C7568 /* gtest.xcodeproj */;
+				},
+			);
 			projectRoot = "";
 			targets = (
 				23BF0D1019A742EE0040E1CE /* unittest */,
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXReferenceProxy section */
+		23FE66B91A1F2051005C7568 /* libglog.a */ = {
+			isa = PBXReferenceProxy;
+			fileType = archive.ar;
+			path = libglog.a;
+			remoteRef = 23FE66B81A1F2051005C7568 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		23FE66BB1A1F2051005C7568 /* glog.framework */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.framework;
+			path = glog.framework;
+			remoteRef = 23FE66BA1A1F2051005C7568 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		23FE66C91A1F206B005C7568 /* gtest.framework */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.framework;
+			path = gtest.framework;
+			remoteRef = 23FE66C81A1F206B005C7568 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		23FE66CB1A1F206B005C7568 /* libgtest.a */ = {
+			isa = PBXReferenceProxy;
+			fileType = archive.ar;
+			path = libgtest.a;
+			remoteRef = 23FE66CA1A1F206B005C7568 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		23FE66CD1A1F206B005C7568 /* libgtest_main.a */ = {
+			isa = PBXReferenceProxy;
+			fileType = archive.ar;
+			path = libgtest_main.a;
+			remoteRef = 23FE66CC1A1F206B005C7568 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		23FE66CF1A1F206B005C7568 /* gtest_unittest-framework */ = {
+			isa = PBXReferenceProxy;
+			fileType = "compiled.mach-o.executable";
+			path = "gtest_unittest-framework";
+			remoteRef = 23FE66CE1A1F206B005C7568 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		23FE66D11A1F206B005C7568 /* gtest_unittest */ = {
+			isa = PBXReferenceProxy;
+			fileType = "compiled.mach-o.executable";
+			path = gtest_unittest;
+			remoteRef = 23FE66D01A1F206B005C7568 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		23FE66D31A1F206B005C7568 /* sample1_unittest-framework */ = {
+			isa = PBXReferenceProxy;
+			fileType = "compiled.mach-o.executable";
+			path = "sample1_unittest-framework";
+			remoteRef = 23FE66D21A1F206B005C7568 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		23FE66D51A1F206B005C7568 /* sample1_unittest-static */ = {
+			isa = PBXReferenceProxy;
+			fileType = "compiled.mach-o.executable";
+			path = "sample1_unittest-static";
+			remoteRef = 23FE66D41A1F206B005C7568 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+/* End PBXReferenceProxy section */
 
 /* Begin PBXSourcesBuildPhase section */
 		23BF0D0D19A742EE0040E1CE /* Sources */ = {
@@ -144,6 +335,19 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		23FE66D71A1F2084005C7568 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = "gtest-framework";
+			targetProxy = 23FE66D61A1F2084005C7568 /* PBXContainerItemProxy */;
+		};
+		23FE66D91A1F208E005C7568 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = glog;
+			targetProxy = 23FE66D81A1F208E005C7568 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		23BF0D0619A7410E0040E1CE /* Debug */ = {
@@ -164,7 +368,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_CXX_LIBRARY = "libstdc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
@@ -203,7 +407,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_CXX_LIBRARY = "libstdc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
