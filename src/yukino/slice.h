@@ -1,11 +1,11 @@
-#ifndef YUKINODB_API_SLICE_H_
-#define YUKINODB_API_SLICE_H_
+#ifndef YUKINO_API_SLICE_H_
+#define YUKINO_API_SLICE_H_
 
 #include <stddef.h>
 #include <assert.h>
 #include <string>
 
-namespace yukinodb {
+namespace yukino {
 
 class Slice {
 public:
@@ -90,4 +90,4 @@ inline int Slice::compare(const Slice& b) const {
 
 }
 
-#endif // YUKINODB_API_SLICE_H_
+#endif // YUKINO_API_SLICE_H_

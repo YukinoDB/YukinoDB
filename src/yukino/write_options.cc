@@ -1,9 +1,9 @@
 #include "write_options.h"
 
-namespace yukinodb {
+namespace yukino {
 
 WriteOptions::WriteOptions()
     : sync(false) {
 }
 
-} // namespace yukinodb
+} // namespace yukino

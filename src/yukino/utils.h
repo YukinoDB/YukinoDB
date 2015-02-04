@@ -1,7 +1,7 @@
 #ifndef YUKI_BASE_BASE_H
 #define YUKI_BASE_BASE_H
 
-namespace yukinodb {
+namespace yukino {
 
 namespace base {
 
@@ -15,6 +15,6 @@ public:
 
 } // namespace base
 
-} // namespace yukinodb
+} // namespace yukino
 
 #endif // YUKI_BASE_BASE_H

@@ -1,7 +1,7 @@
-#ifndef YUKINODB_API_COMPARATOR_H_
-#define YUKINODB_API_COMPARATOR_H_
+#ifndef YUKINO_API_COMPARATOR_H_
+#define YUKINO_API_COMPARATOR_H_
 
-namespace yukinodb {
+namespace yukino {
 
 class Comparator {
 public:
@@ -21,11 +21,11 @@ public:
     // the comparator implementation changes in a way that will cause
     // the relative ordering of any two keys to change.
     //
-    // Names starting with "yukinodb." are reserved and should not be used
+    // Names starting with "yukino." are reserved and should not be used
     // by any clients of this package.
     virtual const char* Name() const = 0;
 };
 
 }
 
-#endif // YUKINODB_API_COMPARATOR_H_
+#endif // YUKINO_API_COMPARATOR_H_

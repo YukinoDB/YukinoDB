@@ -1,7 +1,7 @@
-#ifndef YUKINODB_API_WRITE_OPTIONS_H_
-#define YUKINODB_API_WRITE_OPTIONS_H_
+#ifndef YUKINO_API_WRITE_OPTIONS_H_
+#define YUKINO_API_WRITE_OPTIONS_H_
 
-namespace yukinodb {
+namespace yukino {
 
 struct WriteOptions {
     // If true, the write will be flushed from the operating system
@@ -26,6 +26,6 @@ struct WriteOptions {
 
 }; // struct WriteOptions
 
-} // namespace yukinodb
+} // namespace yukino
 
-#endif // YUKINODB_API_WRITE_OPTIONS_H_
+#endif // YUKINO_API_WRITE_OPTIONS_H_

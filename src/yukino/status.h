@@ -1,10 +1,10 @@
-#ifndef YUKINODB_API_STATUS_H_
-#define YUKINODB_API_STATUS_H_
+#ifndef YUKINO_API_STATUS_H_
+#define YUKINO_API_STATUS_H_
 
-#include "yukinodb/slice.h"
+#include "yukino/slice.h"
 #include <string>
 
-namespace yukinodb {
+namespace yukino {
 
 class Status {
 public:
@@ -90,6 +90,6 @@ inline void Status::operator=(const Status& s) {
     }
 }
 
-} // namespace yukinodb
+} // namespace yukino
 
-#endif // YUKINODB_API_STATUS_H_
+#endif // YUKINO_API_STATUS_H_

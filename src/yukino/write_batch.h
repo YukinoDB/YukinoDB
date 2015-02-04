@@ -1,7 +1,7 @@
-#ifndef YUKINODB_API_WRITE_BATCH_H_
-#define YUKINODB_API_WRITE_BATCH_H_
+#ifndef YUKINO_API_WRITE_BATCH_H_
+#define YUKINO_API_WRITE_BATCH_H_
 
-namespace yukinodb  {
+namespace yukino  {
 
 class Slice;
 
@@ -21,6 +21,6 @@ public:
     
 };
 
-} // namespace yukinodb
+} // namespace yukino
 
-#endif // YUKINODB_API_WRITE_BATCH_H_
+#endif // YUKINO_API_WRITE_BATCH_H_

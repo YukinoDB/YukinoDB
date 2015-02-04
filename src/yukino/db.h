@@ -1,9 +1,9 @@
-#ifndef YUKINODB_API_DB_H_
-#define YUKINODB_API_DB_H_
+#ifndef YUKINO_API_DB_H_
+#define YUKINO_API_DB_H_
 
-#include "yukinodb/status.h"
+#include "yukino/status.h"
 
-namespace yukinodb {
+namespace yukino {
 
 class Iterator;
 class ReadOptions;
@@ -63,6 +63,6 @@ public:
     virtual Iterator* NewIterator(const ReadOptions& options) = 0;
 };
 
-} //namespace yukinodb
+} //namespace yukino
 
-#endif // YUKINODB_API_DB_H_
+#endif // YUKINO_API_DB_H_

@@ -1,7 +1,7 @@
-#include "yukinodb/db.h"
-#include "yukinodb/slice.h"
+#include "yukino/db.h"
+#include "yukino/slice.h"
 
-namespace yukinodb {
+namespace yukino {
 
 /*static*/ Status DB::Open(const Options& options, const std::string& name,
                            DB** dbptr) {
@@ -12,4 +12,4 @@ namespace yukinodb {
 /*virtual*/ DB::~DB() {
 }
 
-} // namespace yukinodb
+} // namespace yukino

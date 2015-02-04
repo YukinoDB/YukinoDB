@@ -1,7 +1,7 @@
-#ifndef YUKINODB_API_OPTION_H_
-#define YUKINODB_API_OPTION_H_
+#ifndef YUKINO_API_OPTION_H_
+#define YUKINO_API_OPTION_H_
 
-namespace yukinodb {
+namespace yukino {
 
 class Env;
 class Comparator;
@@ -37,6 +37,6 @@ struct Options {
 };
 
 
-} // namespace yukinodb
+} // namespace yukino
 
-#endif // YUKINODB_API_OPTION_H_
+#endif // YUKINO_API_OPTION_H_
