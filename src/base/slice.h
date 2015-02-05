@@ -7,6 +7,8 @@
 
 namespace yukino {
 
+namespace base {
+
 class Slice {
 public:
     // Create an empty slice.
@@ -88,6 +90,8 @@ inline int Slice::compare(const Slice& b) const {
     return r;
 }
 
-}
+} // namespace base
+
+} // namespace yukino
 
 #endif // YUKINO_API_SLICE_H_

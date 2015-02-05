@@ -1,12 +1,14 @@
 #ifndef YUKI_BASE_BASE_H
 #define YUKI_BASE_BASE_H
 
-namespace yukinodb {
+namespace yukino {
 
 namespace base {
 
 class DisableCopyAssign {
 public:
+    DisableCopyAssign() = default;
+
     DisableCopyAssign(const DisableCopyAssign &) = delete;
 
     void operator = (const DisableCopyAssign &) = delete;

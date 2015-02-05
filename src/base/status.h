@@ -1,10 +1,12 @@
 #ifndef YUKINO_API_STATUS_H_
 #define YUKINO_API_STATUS_H_
 
-#include "yukino/slice.h"
+#include "base/slice.h"
 #include <string>
 
 namespace yukino {
+
+namespace base {
 
 class Status {
 public:
@@ -89,6 +91,8 @@ inline void Status::operator=(const Status& s) {
         state_ = (s.state_ == NULL) ? NULL : CopyState(s.state_);
     }
 }
+
+} // namespace base
 
 } // namespace yukino
 

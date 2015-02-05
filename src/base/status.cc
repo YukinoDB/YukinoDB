@@ -1,10 +1,12 @@
-#include "yukino/status.h"
-#include "yukino/slice.h"
+#include "base/status.h"
+#include "base/slice.h"
 #include <assert.h>
 #include <string.h>
 #include <stdint.h>
 
 namespace yukino {
+
+namespace base {
 
 const char* Status::CopyState(const char* state) {
     uint32_t size;
@@ -69,5 +71,7 @@ std::string Status::ToString() const {
         return result;
     }
 }
+
+} // namespace base
 
 } // namespace yukino

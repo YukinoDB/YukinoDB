@@ -1,7 +1,7 @@
 #ifndef YUKINO_API_DB_H_
 #define YUKINO_API_DB_H_
 
-#include "yukino/status.h"
+#include "base/status.h"
 
 namespace yukino {
 
@@ -19,9 +19,9 @@ public:
     // OK on success.
     // Stores NULL in *dbptr and returns a non-OK status on error.
     // Caller should delete *dbptr when it is no longer needed.
-    static Status Open(const Options& options,
-                       const std::string& name,
-                       DB** dbptr);
+    static base::Status Open(const Options& options,
+                             const std::string& name,
+                             DB** dbptr);
 
     DB() { }
     virtual ~DB();
@@ -29,20 +29,20 @@ public:
     // Set the database entry for "key" to "value".  Returns OK on success,
     // and a non-OK status on error.
     // Note: consider setting options.sync = true.
-    virtual Status Put(const WriteOptions& options,
-                       const Slice& key,
-                       const Slice& value) = 0;
+    virtual base::Status Put(const WriteOptions& options,
+                             const Slice& key,
+                             const Slice& value) = 0;
 
     // Remove the database entry (if any) for "key".  Returns OK on
     // success, and a non-OK status on error.  It is not an error if "key"
     // did not exist in the database.
     // Note: consider setting options.sync = true.
-    virtual Status Delete(const WriteOptions& options, const Slice& key) = 0;
+    virtual base::Status Delete(const WriteOptions& options, const Slice& key) = 0;
 
     // Apply the specified updates to the database.
     // Returns OK on success, non-OK on failure.
     // Note: consider setting options.sync = true.
-    virtual Status Write(const WriteOptions& options, WriteBatch* updates) = 0;
+    virtual base::Status Write(const WriteOptions& options, WriteBatch* updates) = 0;
 
     // If the database contains an entry for "key" store the
     // corresponding value in *value and return OK.
@@ -51,8 +51,8 @@ public:
     // a status for which Status::IsNotFound() returns true.
     //
     // May return some other Status on an error.
-    virtual Status Get(const ReadOptions& options,
-                       const Slice& key, std::string* value) = 0;
+    virtual base::Status Get(const ReadOptions& options,
+                             const Slice& key, std::string* value) = 0;
 
     // Return a heap-allocated iterator over the contents of the database.
     // The result of NewIterator() is initially invalid (caller must
