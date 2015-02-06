@@ -18,6 +18,9 @@
 		23B694F11A831BCA00E711E4 /* crc32.c in Sources */ = {isa = PBXBuildFile; fileRef = 23B694F01A831BCA00E711E4 /* crc32.c */; };
 		23B694F41A831CCE00E711E4 /* crc32.cc in Sources */ = {isa = PBXBuildFile; fileRef = 23B694F31A831CCE00E711E4 /* crc32.cc */; };
 		23CD83DD1A834AA800D64229 /* crc32_test.cc in Sources */ = {isa = PBXBuildFile; fileRef = 23CD83DC1A834AA800D64229 /* crc32_test.cc */; };
+		23CD83DF1A834E7700D64229 /* table_builder.cc in Sources */ = {isa = PBXBuildFile; fileRef = 23CD83DE1A834E7700D64229 /* table_builder.cc */; };
+		23CD83E41A845C6F00D64229 /* varint_encoding.cc in Sources */ = {isa = PBXBuildFile; fileRef = 23CD83E31A845C6F00D64229 /* varint_encoding.cc */; };
+		23CD83E61A845F9400D64229 /* varint_encoding_test.cc in Sources */ = {isa = PBXBuildFile; fileRef = 23CD83E51A845F9400D64229 /* varint_encoding_test.cc */; };
 		23FE66DB1A1F2284005C7568 /* libglog.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 23FE66B91A1F2051005C7568 /* libglog.a */; };
 /* End PBXBuildFile section */
 
@@ -137,6 +140,12 @@
 		23B694F31A831CCE00E711E4 /* crc32.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = crc32.cc; sourceTree = "<group>"; };
 		23BF0D1119A742EE0040E1CE /* unittest */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = unittest; sourceTree = BUILT_PRODUCTS_DIR; };
 		23CD83DC1A834AA800D64229 /* crc32_test.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = crc32_test.cc; path = src/base/crc32_test.cc; sourceTree = SOURCE_ROOT; };
+		23CD83DE1A834E7700D64229 /* table_builder.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = table_builder.cc; sourceTree = "<group>"; };
+		23CD83E01A834F4900D64229 /* builtin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = builtin.h; sourceTree = "<group>"; };
+		23CD83E11A8350EA00D64229 /* chunk.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = chunk.h; sourceTree = "<group>"; };
+		23CD83E21A83627B00D64229 /* varint_encoding.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = varint_encoding.h; sourceTree = "<group>"; };
+		23CD83E31A845C6F00D64229 /* varint_encoding.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = varint_encoding.cc; sourceTree = "<group>"; };
+		23CD83E51A845F9400D64229 /* varint_encoding_test.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = varint_encoding_test.cc; path = src/base/varint_encoding_test.cc; sourceTree = SOURCE_ROOT; };
 		23FE66B31A1F2051005C7568 /* glog.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = glog.xcodeproj; path = third_party/glog/xcode/glog.xcodeproj; sourceTree = "<group>"; };
 		23FE66BC1A1F206B005C7568 /* gtest.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = gtest.xcodeproj; path = third_party/gtest/xcode/gtest.xcodeproj; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -188,6 +197,9 @@
 			isa = PBXGroup;
 			children = (
 				23B694EE1A82209500E711E4 /* table_builder.h */,
+				23CD83DE1A834E7700D64229 /* table_builder.cc */,
+				23CD83E01A834F4900D64229 /* builtin.h */,
+				23CD83E11A8350EA00D64229 /* chunk.h */,
 			);
 			name = lsm;
 			path = src/lsm;
@@ -204,6 +216,8 @@
 				23B694EF1A83196900E711E4 /* io.h */,
 				23B694F21A831C1500E711E4 /* crc32.h */,
 				23B694F31A831CCE00E711E4 /* crc32.cc */,
+				23CD83E21A83627B00D64229 /* varint_encoding.h */,
+				23CD83E31A845C6F00D64229 /* varint_encoding.cc */,
 			);
 			name = base;
 			path = src/base;
@@ -233,6 +247,7 @@
 			children = (
 				2380F6261A106F3B00B1EA97 /* base_test.cc */,
 				23CD83DC1A834AA800D64229 /* crc32_test.cc */,
+				23CD83E51A845F9400D64229 /* varint_encoding_test.cc */,
 			);
 			path = unittest;
 			sourceTree = "<group>";
@@ -396,6 +411,9 @@
 				23B694EB1A82207300E711E4 /* read_options.cc in Sources */,
 				23B694ED1A82207300E711E4 /* write_options.cc in Sources */,
 				23B694F11A831BCA00E711E4 /* crc32.c in Sources */,
+				23CD83E41A845C6F00D64229 /* varint_encoding.cc in Sources */,
+				23CD83E61A845F9400D64229 /* varint_encoding_test.cc in Sources */,
+				23CD83DF1A834E7700D64229 /* table_builder.cc in Sources */,
 				23B694E91A82207300E711E4 /* db.cc in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -435,8 +453,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_CXX_LIBRARY = "libstdc++";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
+				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
@@ -474,8 +492,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_CXX_LIBRARY = "libstdc++";
+				CLANG_CXX_LANGUAGE_STANDARD = "c++0x";
+				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
