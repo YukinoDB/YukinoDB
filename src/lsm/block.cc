@@ -216,12 +216,6 @@ uint32_t BlockBuilder::CalcSharedSize(const base::Slice &key,
         return 0; // no shared part. explicit
     }
 
-    if (i == size && key.size() < last_key_.size()) {
-        *should_restart = true;
-        return 0;
-    }
-
-    DCHECK_GE(i, last_shared_size_);
     return i;
 }
 

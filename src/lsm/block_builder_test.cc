@@ -153,6 +153,22 @@ TEST_F(BlockBuilderTest, PrefixBreakWriting3) {
     EXPECT_EQ(expected, buf_->buf());
 }
 
+TEST_F(BlockBuilderTest, PrefixBreakWriting4) {
+    Chunk key[] = {
+        Chunk::CreateKey("aaa"),
+        Chunk::CreateKey("aa"),
+    };
+
+    for (const auto &chunk : key) {
+        builder_->Append(chunk);
+    }
+
+    std::string expected{
+        0x00, 0x03, 0x00, 0x61, 0x61, 0x61, 0x02, 0x00, 0x00,
+    };
+    EXPECT_EQ(expected, buf_->buf());
+}
+
 } // namespace lsm
 
 } // namespace yukino
