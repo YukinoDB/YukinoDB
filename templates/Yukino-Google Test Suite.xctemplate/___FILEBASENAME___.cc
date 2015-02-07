@@ -12,7 +12,7 @@ namespace yukino {
 
 class ___VARIABLE_suiteName___Test : public ::testing::Test {
 public:
-    ___VARIABLE_suiteName___+Test () {
+    ___VARIABLE_suiteName___Test () {
     }
 
     virtual void SetUp() override {
