@@ -22,13 +22,13 @@ TEST(CRC32Test, Sanity) {
 TEST(CRC32Test, Bytes) {
     CRC32 crc32(0);
 
-    crc32.Step("abcd", 4);
-    crc32.Step("efgh", 4);
+    crc32.Update("abcd", 4);
+    crc32.Update("efgh", 4);
 
     auto old = crc32.digest();
     crc32.Reset();
 
-    crc32.Step("abcdefgh", 8);
+    crc32.Update("abcdefgh", 8);
     ASSERT_EQ(old, crc32.digest());
 }
 
