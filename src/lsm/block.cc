@@ -59,37 +59,15 @@ BlockBuilder::BlockBuilder(base::Writer *writer, size_t block_size,
  | value_data        | value_size
  +-------------------+
  */
-bool BlockBuilder::CanAppend(const Chunk &chunk) {
-    bool should_restart = false;
-
-    auto shared_size = CalcSharedSize(chunk.key_slice(), &should_restart);
-    auto unshared_size = chunk.key_size() - shared_size - last_shared_size_;
-
-    size_t add_size = 0;
-    add_size += base::Varint32::Sizeof(shared_size);
-    add_size += base::Varint32::Sizeof(unshared_size);
-    add_size += base::Varint64::Sizeof(chunk.value_size());
-    add_size += unshared_size;
-    add_size += chunk.value_size();
-
-    if (should_restart) {
-        add_size += sizeof(uint32_t); // one index's size
-    }
+bool BlockBuilder::CanAppend(const Chunk &chunk) const {
+    auto add_size = CalcChunkSize(chunk);
 
     // chunk size biger than block size, make it to large block.
     if (add_size > fixed_block_size_) {
-        if (block_size_ > fixed_block_size_) {
-            return false;
-        } else {
-            return true;
-        }
+        return block_size_ <= fixed_block_size_;
     }
 
-    if (active_size_ + add_size < block_size_) {
-        return true;
-    }
-
-    return false;
+    return active_size_ + add_size < block_size_;
 }
 
 base::Status BlockBuilder::Append(const Chunk &chunk) {
@@ -124,22 +102,17 @@ base::Status BlockBuilder::Append(const Chunk &chunk) {
     add_size += len;
 
     if (should_restart) {
-        last_shared_size_ = 0;
-
         uint32_t restart_index = active_size_ - kBlockFixedSize;
 
         add_size += sizeof(restart_index);
         index_.push_back(restart_index);
 
-        restart_count_ = 0;
-        last_key_ = base::Slice();
+        restart_count_ = 1;
     } else {
-        last_shared_size_ = shared_size;
-
         restart_count_++;
-        last_key_ = chunk.key_slice();
     }
-
+    last_shared_size_ = shared_size;
+    last_key_ = chunk.key_slice();
 
     // chunk size is too big, we should make block to large block.
     // ( > 1 fixed_block_size_)
@@ -187,17 +160,27 @@ void BlockBuilder::Reset() {
     static_cast<base::VerifiedWriter<base::CRC32> *>(writer_.get())->Reset();
 }
 
-// abcd   0
-// abcde  4
-// abcdef
-//
-//
-uint32_t BlockBuilder::CalcSharedSize(const base::Slice &key,
-                                      bool *should_restart) {
-    if (restart_count_ == 0) { // first chunk before restart.
-        return 0;
-    }
+size_t BlockBuilder::CalcChunkSize(const Chunk &chunk) const {
+    bool should_restart = false;
 
+    auto shared_size = CalcSharedSize(chunk.key_slice(), &should_restart);
+    auto unshared_size = chunk.key_size() - shared_size;
+
+    size_t add_size = 0;
+    add_size += base::Varint32::Sizeof(shared_size);
+    add_size += base::Varint32::Sizeof(unshared_size);
+    add_size += base::Varint64::Sizeof(chunk.value_size());
+    add_size += unshared_size;
+    add_size += chunk.value_size();
+
+    if (should_restart) {
+        add_size += sizeof(uint32_t); // one index's size
+    }
+    return add_size;
+}
+
+uint32_t BlockBuilder::CalcSharedSize(const base::Slice &key,
+                                      bool *should_restart) const {
     if (restart_count_ % restart_interval_ == 0) {
         *should_restart = true;
         return 0;

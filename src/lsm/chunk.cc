@@ -34,10 +34,16 @@ Chunk::~Chunk() {
     return std::move(Chunk(dup, static_cast<uint32_t>(key.size())));
 }
 
-///*static*/ Chunk &&Chunk::CreateKeyValue(const base::Slice &key,
-//                                  const base::Slice &value) {
-//
-//}
+/*static*/ Chunk Chunk::CreateKeyValue(const base::Slice &key,
+                                       const base::Slice &value) {
+    char *dup = new char[key.size() + value.size()];
+
+    ::memcpy(DCHECK_NOTNULL(dup), key.data(), key.size());
+    ::memcpy(dup + key.size(), value.data(), value.size());
+
+    return std::move(Chunk(dup, key.size() + value.size(),
+                           static_cast<uint32_t>(key.size())));
+}
 
 } // namespace lsm
     

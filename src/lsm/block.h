@@ -25,13 +25,15 @@ class BlockBuilder : public base::DisableCopyAssign {
 public:
     BlockBuilder(base::Writer *writer, size_t block_size, int restart_interval);
 
-    bool CanAppend(const Chunk &chunk);
+    bool CanAppend(const Chunk &chunk) const;
 
     base::Status Append(const Chunk &chunk);
 
     base::Status Finalize(char type, BlockHandle *handle);
 
-    uint32_t CalcSharedSize(const base::Slice &key, bool *should_restart);
+    size_t CalcChunkSize(const Chunk &chunk) const;
+
+    uint32_t CalcSharedSize(const base::Slice &key, bool *should_restart) const;
 private:
 
     void Reset();
@@ -69,7 +71,7 @@ private:
     // void set_offset(uint64_t offset) { offset_ = offset; }
     void set_size(uint64_t size) { size_ = size; }
 
-    uint64_t offset_ = 0;
+    uint64_t offset_;
     uint64_t size_ = 0;
 };
 

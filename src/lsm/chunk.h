@@ -37,8 +37,8 @@ public:
     char *mutable_value() { return packed_data_.get() + key_size(); }
 
     static Chunk CreateKey(const base::Slice &key);
-//    static Chunk &&CreateKeyValue(const base::Slice &key,
-//                                  const base::Slice &value);
+    static Chunk CreateKeyValue(const base::Slice &key,
+                                const base::Slice &value);
 private:
     uint64_t size_;
     uint32_t key_size_;

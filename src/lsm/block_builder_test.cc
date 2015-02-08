@@ -169,6 +169,31 @@ TEST_F(BlockBuilderTest, PrefixBreakWriting4) {
     EXPECT_EQ(expected, buf_->buf());
 }
 
+TEST_F(BlockBuilderTest, CalcChunkSize) {
+    Chunk key[] = {
+        Chunk::CreateKey("a"),
+        Chunk::CreateKey("aa"),
+        Chunk::CreateKey("ab"),
+        Chunk::CreateKey("acd"),
+    };
+
+    auto size = builder_->CalcChunkSize(key[0]);
+    EXPECT_EQ(8, size);
+    builder_->Append(key[0]);
+
+    size = builder_->CalcChunkSize(key[1]);
+    EXPECT_EQ(4, size);
+    builder_->Append(key[1]);
+
+    size = builder_->CalcChunkSize(key[2]);
+    EXPECT_EQ(4, size);
+    builder_->Append(key[2]);
+
+    size = builder_->CalcChunkSize(key[3]);
+    EXPECT_EQ(10, size);
+    builder_->Append(key[3]);
+}
+
 } // namespace lsm
 
 } // namespace yukino
