@@ -34,6 +34,9 @@ public:
     size_t CalcChunkSize(const Chunk &chunk) const;
 
     uint32_t CalcSharedSize(const base::Slice &key, bool *should_restart) const;
+
+    base::Writer *writer() const { return writer_.get(); }
+
 private:
 
     void Reset();
@@ -59,8 +62,8 @@ public:
 
     BlockHandle &operator = (const BlockHandle &) = default;
 
-    uint64_t offset() { return offset_; }
-    uint64_t size() { return size_; }
+    uint64_t offset() const { return offset_; }
+    uint64_t size() const { return size_; }
 
     uint64_t NumberOfBlocks(size_t block_size) {
         return (size() + block_size - 1) / block_size;

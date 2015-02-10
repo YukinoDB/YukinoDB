@@ -25,7 +25,7 @@ struct TableOptions {
 class TableBuilder : public base::DisableCopyAssign {
 public:
     TableBuilder(const TableOptions &options, base::Writer *writer);
-    ~TableBuilder() = default;
+    ~TableBuilder();
 
     base::Status Append(const Chunk &chunk);
 

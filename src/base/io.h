@@ -22,9 +22,17 @@ public:
         return Write(buf.data(), buf.size(), written);
     }
 
-    Status WriteVarint32(uint32_t, size_t *written);
+    Status WriteVarint32(uint32_t value, size_t *written);
 
-    Status WriteVarint64(uint64_t, size_t *written);
+    Status WriteVarint64(uint64_t value, size_t *written);
+
+    Status WriteFixed32(uint32_t value) {
+        return Write(&value, sizeof(value), nullptr);
+    }
+
+    Status WriteFixed64(uint64_t value) {
+        return Write(&value, sizeof(value), nullptr);
+    }
 
     virtual Status Write(const void *data, size_t size, size_t *written) = 0;
 

@@ -15,6 +15,7 @@ public:
 
 }; // class DisableCopyAssign
 
+
 // clz - count leading zero
 #define YK_CLZ64(n)  \
     (!(( n ) & 0xffffffff00000000ull) ? \
