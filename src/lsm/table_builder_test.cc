@@ -8,6 +8,7 @@
 //
 //
 #include "lsm/table_builder.h"
+#include "lsm/chunk.h"
 #include "base/mem_io.h"
 #include "gtest/gtest.h"
 #include <stdio.h>

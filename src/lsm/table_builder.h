@@ -1,8 +1,6 @@
 #ifndef YUKINO_LSM_TABLE_BUILDER_H_
 #define YUKINO_LSM_TABLE_BUILDER_H_
 
-#include "lsm/chunk.h"
-#include "base/io.h"
 #include "base/status.h"
 #include "base/base.h"
 #include <stdint.h>
@@ -10,7 +8,15 @@
 
 namespace yukino {
 
+namespace base {
+
+class Writer;
+
+} // namespace base
+
 namespace lsm {
+
+class Chunk;
 
 struct TableOptions {
     TableOptions();

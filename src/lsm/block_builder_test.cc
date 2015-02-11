@@ -6,7 +6,9 @@
 //
 //
 #include "lsm/block.h"
+#include "lsm/table.h"
 #include "lsm/chunk.h"
+#include "yukino/comparator.h"
 #include "base/mem_io.h"
 #include "base/varint_encoding.h"
 #include "gtest/gtest.h"
@@ -192,6 +194,112 @@ TEST_F(BlockBuilderTest, CalcChunkSize) {
     size = builder_->CalcChunkSize(key[3]);
     EXPECT_EQ(10, size);
     builder_->Append(key[3]);
+}
+
+TEST_F(BlockBuilderTest, BlockIterating) {
+    Chunk key[] = {
+        Chunk::CreateKeyValue("a", "1"),
+        Chunk::CreateKeyValue("aa", "2"),
+        Chunk::CreateKeyValue("c", "3"),
+        Chunk::CreateKeyValue("d", "4"),
+    };
+
+    for (const auto &chunk : key) {
+        builder_->Append(chunk);
+    }
+    BlockHandle handle(0);
+    builder_->Finalize(kTypeData, &handle);
+
+    std::unique_ptr<Comparator> comparator(CreateBitwiseComparator());
+    BlockIterator iter(comparator.get(), buf_->buf().data(), buf_->buf().size());
+    EXPECT_EQ("a", iter.key().ToString());
+    EXPECT_EQ("1", iter.value().ToString());
+    iter.Next();
+    EXPECT_EQ("aa", iter.key().ToString());
+    EXPECT_EQ("2", iter.value().ToString());
+    iter.Next();
+    EXPECT_EQ("c", iter.key().ToString());
+    EXPECT_EQ("3", iter.value().ToString());
+    iter.Next();
+    EXPECT_EQ("d", iter.key().ToString());
+    EXPECT_EQ("4", iter.value().ToString());
+}
+
+TEST_F(BlockBuilderTest, BlockSeeking) {
+    Chunk key[] = {
+        Chunk::CreateKeyValue("a", "1"),
+        Chunk::CreateKeyValue("b", "2"),
+        Chunk::CreateKeyValue("c", "3"),
+        Chunk::CreateKeyValue("d", "4"),
+    };
+
+    for (const auto &chunk : key) {
+        builder_->Append(chunk);
+    }
+    BlockHandle handle(0);
+    builder_->Finalize(kTypeData, &handle);
+
+    std::unique_ptr<Comparator> comparator(CreateBitwiseComparator());
+    BlockIterator iter(comparator.get(), buf_->buf().data(), buf_->buf().size());
+
+    iter.Seek("a");
+    EXPECT_EQ(true, iter.Valid());
+    EXPECT_EQ("a", iter.key().ToString());
+    EXPECT_EQ("1", iter.value().ToString());
+
+    iter.Seek("b");
+    EXPECT_EQ(true, iter.Valid());
+    EXPECT_EQ("b", iter.key().ToString());
+    EXPECT_EQ("2", iter.value().ToString());
+
+    iter.Seek("c");
+    EXPECT_EQ(true, iter.Valid());
+    EXPECT_EQ("c", iter.key().ToString());
+    EXPECT_EQ("3", iter.value().ToString());
+
+    iter.Seek("d");
+    EXPECT_EQ(true, iter.Valid());
+    EXPECT_EQ("d", iter.key().ToString());
+    EXPECT_EQ("4", iter.value().ToString());
+
+}
+
+TEST_F(BlockBuilderTest, BlockPrefixSeeking) {
+    Chunk key[] = {
+        Chunk::CreateKeyValue("a", "1"),
+        Chunk::CreateKeyValue("ab", "2"),
+        Chunk::CreateKeyValue("abc", "3"),
+        Chunk::CreateKeyValue("abcd", "4"),
+    };
+
+    for (const auto &chunk : key) {
+        builder_->Append(chunk);
+    }
+    BlockHandle handle(0);
+    builder_->Finalize(kTypeData, &handle);
+
+    std::unique_ptr<Comparator> comparator(CreateBitwiseComparator());
+    BlockIterator iter(comparator.get(), buf_->buf().data(), buf_->buf().size());
+
+    iter.Seek("a");
+    EXPECT_EQ(true, iter.Valid());
+    EXPECT_EQ("a", iter.key().ToString());
+    EXPECT_EQ("1", iter.value().ToString());
+
+    iter.Seek("ab");
+    EXPECT_EQ(true, iter.Valid());
+    EXPECT_EQ("ab", iter.key().ToString());
+    EXPECT_EQ("2", iter.value().ToString());
+
+    iter.Seek("abc");
+    EXPECT_EQ(true, iter.Valid());
+    EXPECT_EQ("abc", iter.key().ToString());
+    EXPECT_EQ("3", iter.value().ToString());
+
+    iter.Seek("abcd");
+    EXPECT_EQ(true, iter.Valid());
+    EXPECT_EQ("abcd", iter.key().ToString());
+    EXPECT_EQ("4", iter.value().ToString());
 }
 
 } // namespace lsm

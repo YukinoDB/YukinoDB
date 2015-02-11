@@ -1,9 +1,10 @@
 #ifndef YUKINO_BASE_IO_H_
 #define YUKINO_BASE_IO_H_
 
-#include "base/base.h"
 #include "base/status.h"
 #include "base/slice.h"
+#include "base/base.h"
+#include "glog/logging.h"
 
 namespace yukino {
 
@@ -15,8 +16,8 @@ namespace base {
  */
 class Writer : public DisableCopyAssign {
 public:
-    Writer() {}
-    virtual ~Writer() {}
+    Writer();
+    virtual ~Writer();
 
     Status Write(const Slice &buf, size_t *written) {
         return Write(buf.data(), buf.size(), written);
@@ -37,6 +38,11 @@ public:
     virtual Status Write(const void *data, size_t size, size_t *written) = 0;
 
     virtual Status Skip(size_t count) = 0;
+
+    size_t active() const { return active_; }
+
+protected:
+    size_t active_ = 0;
 };
 
 template<class Checksum>
@@ -70,6 +76,96 @@ public:
 private:
     Writer *delegated_;
     Checksum checker_;
+};
+
+class BufferedReader : public DisableCopyAssign {
+public:
+    BufferedReader(const void *buf, size_t len)
+        : buf_(static_cast<const uint8_t *>(DCHECK_NOTNULL(buf)))
+        , active_(len) {
+        DCHECK_LT(0, active_);
+    }
+
+    Slice Read(size_t count) {
+        DCHECK_GE(active_, count);
+        Slice rv(typed<char>(), count);
+        Advance(count);
+        return rv;
+    }
+
+    uint32_t ReadFixed32() {
+        DCHECK_GE(active_, sizeof(uint32_t));
+        auto rv = *typed<uint32_t>();
+        Advance(sizeof(uint32_t));
+        return rv;
+    }
+
+    uint64_t ReadFixed64() {
+        DCHECK_GE(active_, sizeof(uint64_t));
+        auto rv = *typed<uint64_t>();
+        Advance(sizeof(uint64_t));
+        return rv;
+    }
+
+    uint32_t ReadVarint32();
+
+    uint64_t ReadVarint64();
+
+    uint8_t ReadByte() {
+        DCHECK_GE(active_, sizeof(uint8_t));
+        auto rv = *buf_;
+        Advance(sizeof(uint8_t));
+        return rv;
+    }
+
+    void Skip(size_t count) {
+        DCHECK_GE(active_, count);
+        Advance(count);
+    }
+
+    size_t active() const { return active_; }
+
+    const uint8_t *current() const { return buf_; }
+
+private:
+    void Advance(size_t count) {
+        buf_    += count;
+        active_ -= count;
+    }
+
+    template<class T>
+    inline const T *typed() {
+        return reinterpret_cast<const T*>(buf_);
+    }
+
+    const uint8_t *buf_;
+    size_t active_;
+};
+
+class MappedMemory : public DisableCopyAssign {
+public:
+    MappedMemory(const std::string &file_name, void *buf, size_t len);
+    MappedMemory(MappedMemory &&other);
+    virtual ~MappedMemory() {}
+
+    bool Valid() const { return buf_ != nullptr && len_ > 0; }
+
+    size_t size() const { return len_; }
+
+    const uint8_t *buf() const { return buf(0); }
+    const uint8_t *buf(size_t offset) const {
+        DCHECK_LT(offset, len_);
+        return buf_ + offset;
+    }
+
+    const std::string &file_name() const { return file_name_; }
+
+protected:
+    uint8_t *buf_;
+    size_t   len_;
+
+private:
+    std::string file_name_;
 };
 
 } // namespace base

@@ -1,5 +1,6 @@
 #include "lsm/block.h"
 #include "lsm/chunk.h"
+#include "yukino/comparator.h"
 #include "base/io.h"
 #include "base/crc32.h"
 #include "base/slice.h"
@@ -102,7 +103,7 @@ base::Status BlockBuilder::Append(const Chunk &chunk) {
     add_size += len;
 
     if (should_restart) {
-        uint32_t restart_index = active_size_ - kBlockFixedSize;
+        auto restart_index = static_cast<uint32_t>(writer_->active());
 
         add_size += sizeof(restart_index);
         index_.push_back(restart_index);
@@ -201,6 +202,124 @@ uint32_t BlockBuilder::CalcSharedSize(const base::Slice &key,
 
     return i;
 }
+
+
+BlockIterator::BlockIterator(const Comparator *comparator, const void *base,
+                             size_t size)
+    : comparator_(comparator)
+    , status_(base::Status::OK()) {
+
+    base_ = static_cast<const uint8_t *>(base);
+
+    num_restarts_ = *reinterpret_cast<const uint32_t *>(base_ + size
+                                                        - kBlockFixedSize);
+    restarts_ = reinterpret_cast<const uint32_t *>(base_ + size
+                                                   - kBlockFixedSize
+                                                   - num_restarts_
+                                                   * sizeof(uint32_t));
+    data_end_ = reinterpret_cast<const uint8_t *>(restarts_);
+
+    SeekToFirst();
+}
+
+BlockIterator::~BlockIterator() {
+
+}
+
+bool BlockIterator::Valid() const {
+    return status_.ok() && current_ >= base_ && current_ <= data_end_;
+}
+
+void BlockIterator::SeekToFirst() {
+    current_ = base_;
+    Next();
+}
+
+void BlockIterator::SeekToLast() {
+    status_ = base::Status::NotSupported("SeekToLast()");
+}
+
+void BlockIterator::Seek(const base::Slice& target) {
+    int32_t i;
+    for (i = static_cast<int32_t>(num_restarts_) - 1; i != 0; i--) {
+        auto entry = base_ + restarts_[i];
+
+        base::BufferedReader reader(entry, -1);
+        auto shared_size = reader.ReadVarint32(); // Ignore
+        DCHECK_EQ(0, shared_size);
+        auto unshared_size = reader.ReadVarint32();
+        reader.ReadVarint64(); // Ignore
+
+        auto unshared = reader.Read(unshared_size);
+        if (comparator_->Compare(target, unshared) >= 0) {
+            break;
+        }
+    }
+
+    if (i == num_restarts_) {
+        status_ = base::Status::NotFound("Seek()");
+        return;
+    }
+
+    auto entry = base_ + restarts_[i];
+    auto end   = (i == num_restarts_ - 1) ? data_end_ : base_ + restarts_[i+1];
+
+    std::string key;
+    while (entry < end) {
+        base::BufferedReader reader(entry, -1);
+        auto shared_size = reader.ReadVarint32();
+        auto unshared_size = reader.ReadVarint32();
+        auto value_size = reader.ReadVarint64();
+
+        auto last_key = key;
+        auto unshared_key = reader.Read(unshared_size);
+        key.assign(last_key.data(), shared_size);
+        key.append(unshared_key.data(), unshared_key.size());
+        if (target.compare(key) == 0) {
+            key_ = key;
+            value_ = reader.Read(value_size);
+            current_ = reader.current();
+            return;
+        }
+
+        reader.Skip(value_size);
+        entry = reader.current();
+    }
+
+    status_ = base::Status::NotFound("Seek()");
+}
+
+void BlockIterator::Next() {
+    base::BufferedReader reader(current_, -1);
+    uint32_t shared_size = reader.ReadVarint32();
+    uint32_t unshared_size = reader.ReadVarint32();
+    uint64_t value_size = reader.ReadVarint64();
+
+    auto last_key = key_;
+    auto unshared_key = reader.Read(unshared_size);
+    key_.assign(last_key.data(), shared_size);
+    key_.append(unshared_key.data(), unshared_key.size());
+    value_ = reader.Read(value_size);
+
+    current_ = reader.current();
+}
+
+void BlockIterator::Prev() {
+    status_ = base::Status::NotSupported("Prev()");
+}
+
+base::Slice BlockIterator::key() const {
+    return base::Slice(key_);
+}
+
+base::Slice BlockIterator::value() const {
+    return value_;
+}
+
+base::Status BlockIterator::status() const {
+    return status_;
+}
+
 
 } // namespace lsm
 
