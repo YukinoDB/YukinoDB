@@ -40,6 +40,9 @@ public:
 
     base::Writer *writer() const { return writer_.get(); }
 
+    bool unlimited() const { return unlimited_; }
+    void SetUnlimited(bool unlimited) { unlimited_ = unlimited; }
+
 private:
 
     void Reset();
@@ -56,6 +59,8 @@ private:
     base::Slice last_key_;
 
     std::vector<uint32_t> index_;
+
+    bool unlimited_;
 };
 
 class BlockHandle {

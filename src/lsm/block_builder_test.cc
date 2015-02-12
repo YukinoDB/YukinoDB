@@ -225,6 +225,42 @@ TEST_F(BlockBuilderTest, BlockIterating) {
     EXPECT_EQ("4", iter.value().ToString());
 }
 
+TEST_F(BlockBuilderTest, BlockUnlimited) {
+    builder_->SetUnlimited(true);
+    ASSERT_TRUE(builder_->unlimited());
+
+    auto key = Chunk::CreateKey("aa");
+    auto i = 512;
+    while (i--) {
+        EXPECT_TRUE(builder_->Append(key).ok());
+    }
+    BlockHandle handle(0);
+    EXPECT_TRUE(builder_->Finalize(0, &handle).ok());
+    EXPECT_EQ(2571ULL, handle.size());
+
+    EXPECT_LT(0, handle.NumberOfBlocks(kBlockSize));
+}
+
+TEST_F(BlockBuilderTest, BlockLimited) {
+    ASSERT_FALSE(builder_->unlimited());
+
+    auto key = Chunk::CreateKey("aa");
+    auto i = 512;
+    while (i--) {
+        if (builder_->CanAppend(key)) {
+            builder_->Append(key);
+        } else {
+            break;
+        }
+    }
+
+    BlockHandle handle(0);
+    EXPECT_TRUE(builder_->Finalize(0, &handle).ok());
+    EXPECT_EQ(504ULL, handle.size());
+
+    EXPECT_EQ(1, handle.NumberOfBlocks(kBlockSize));
+}
+
 TEST_F(BlockBuilderTest, BlockSeeking) {
     Chunk key[] = {
         Chunk::CreateKeyValue("a", "1"),

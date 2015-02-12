@@ -159,6 +159,7 @@ base::Status TableBuilder::Finalize() {
             return rs;
     }
 
+    core_->builder_.SetUnlimited(true);
     for (const auto &chunk : core_->index_) {
         auto rs = Append(chunk);
         if (!rs.ok())

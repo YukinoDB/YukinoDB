@@ -61,6 +61,10 @@ BlockBuilder::BlockBuilder(base::Writer *writer, size_t block_size,
  +-------------------+
  */
 bool BlockBuilder::CanAppend(const Chunk &chunk) const {
+    if (unlimited_) {
+        return true;
+    }
+
     auto add_size = CalcChunkSize(chunk);
 
     // chunk size biger than block size, make it to large block.
@@ -115,11 +119,17 @@ base::Status BlockBuilder::Append(const Chunk &chunk) {
     last_shared_size_ = shared_size;
     last_key_ = chunk.key_slice();
 
-    // chunk size is too big, we should make block to large block.
-    // ( > 1 fixed_block_size_)
-    if (add_size > fixed_block_size_) {
-        while (block_size_ < add_size + kBlockFixedSize) {
+    if (unlimited_) {
+        while (block_size_ < add_size + active_size_) {
             block_size_ += fixed_block_size_;
+        }
+    } else {
+        // chunk size is too big, we should make block to large block.
+        // ( > 1 fixed_block_size_)
+        if (add_size > fixed_block_size_) {
+            while (block_size_ < add_size + kBlockFixedSize) {
+                block_size_ += fixed_block_size_;
+            }
         }
     }
 
@@ -156,6 +166,7 @@ void BlockBuilder::Reset() {
     restart_count_ = 0;
     last_shared_size_ = 0;
     last_key_ = base::Slice();
+    unlimited_ = false;
 
     index_.clear();
     static_cast<base::VerifiedWriter<base::CRC32> *>(writer_.get())->Reset();
@@ -240,6 +251,7 @@ void BlockIterator::SeekToLast() {
 }
 
 void BlockIterator::Seek(const base::Slice& target) {
+    bool found = false;
     int32_t i;
     for (i = static_cast<int32_t>(num_restarts_) - 1; i != 0; i--) {
         auto entry = base_ + restarts_[i];
@@ -252,11 +264,12 @@ void BlockIterator::Seek(const base::Slice& target) {
 
         auto unshared = reader.Read(unshared_size);
         if (comparator_->Compare(target, unshared) >= 0) {
+            found = true;
             break;
         }
     }
 
-    if (i == num_restarts_) {
+    if (!found) {
         status_ = base::Status::NotFound("Seek()");
         return;
     }
