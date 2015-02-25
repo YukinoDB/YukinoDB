@@ -25,6 +25,11 @@ class BlockIterator;
 
 class Table : public base::DisableCopyAssign {
 public:
+    struct IndexEntry {
+        std::string key;
+        BlockHandle handle;
+    };
+
     Table(const Comparator *comparator, base::MappedMemory *mmap);
     virtual ~Table();
 
@@ -32,7 +37,10 @@ public:
 
     BlockHandle ReadHandle(base::BufferedReader *reader);
 
-    bool VerifyBlock(const BlockHandle &handle, char *type);
+    bool VerifyBlock(const BlockHandle &handle, char *type) const;
+
+    base::Status LoadIndex(const BlockHandle &handle,
+                           std::vector<IndexEntry> *index);
 
     uint32_t file_version() const { return file_version_; }
     int restart_interval() const { return restart_interval_; }
@@ -42,12 +50,8 @@ public:
 
     friend class TableIterator;
     friend class ChunkIterator;
-private:
-    struct IndexEntry {
-        std::string key;
-        BlockHandle handle;
-    };
 
+private:
     base::MappedMemory *mmap_;
     const Comparator *comparator_;
     std::vector<IndexEntry> index_;
@@ -79,6 +83,14 @@ public:
     virtual base::Slice value() const override;
 
     virtual base::Status status() const override;
+
+private:
+    void SeekByHandle(const BlockHandle &handle);
+
+    const Table *owned_;
+    std::unique_ptr<Iterator> block_iter_;
+    size_t block_idx_;
+    base::Status status_;
 };
 
 

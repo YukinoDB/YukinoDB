@@ -212,6 +212,7 @@ TEST_F(BlockBuilderTest, BlockIterating) {
 
     std::unique_ptr<Comparator> comparator(CreateBytewiseComparator());
     BlockIterator iter(comparator.get(), buf_->buf().data(), buf_->buf().size());
+    iter.SeekToFirst();
     EXPECT_EQ("a", iter.key().ToString());
     EXPECT_EQ("1", iter.value().ToString());
     iter.Next();

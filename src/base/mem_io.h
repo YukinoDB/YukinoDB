@@ -17,6 +17,8 @@ public:
 
     const std::string &buf() const { return buf_; }
 
+    std::string *mutable_buf() { return &buf_; }
+
 private:
     std::string buf_;
 };

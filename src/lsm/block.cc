@@ -230,7 +230,7 @@ BlockIterator::BlockIterator(const Comparator *comparator, const void *base,
                                                    * sizeof(uint32_t));
     data_end_ = reinterpret_cast<const uint8_t *>(restarts_);
 
-    SeekToFirst();
+    //SeekToFirst();
 }
 
 BlockIterator::~BlockIterator() {
@@ -253,7 +253,7 @@ void BlockIterator::SeekToLast() {
 void BlockIterator::Seek(const base::Slice& target) {
     bool found = false;
     int32_t i;
-    for (i = static_cast<int32_t>(num_restarts_) - 1; i != 0; i--) {
+    for (i = static_cast<int32_t>(num_restarts_) - 1; i >= 0; i--) {
         auto entry = base_ + restarts_[i];
 
         base::BufferedReader reader(entry, -1);

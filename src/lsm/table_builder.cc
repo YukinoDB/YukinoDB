@@ -121,6 +121,12 @@ public:
         return base::Status::OK();
     }
 
+    base::Status Append(const Chunk &chunk) {
+        block_close_ = false;
+        splite_key_ = chunk.key_slice();
+        return builder_.Append(chunk);
+    }
+
     BlockBuilder builder_;
     base::Slice splite_key_;
 
@@ -140,16 +146,14 @@ TableBuilder::~TableBuilder() {
 
 base::Status TableBuilder::Append(const Chunk &chunk) {
     if (core_->builder_.CanAppend(chunk)) {
-        core_->block_close_ = false;
-        core_->splite_key_ = chunk.key_slice();
-        return core_->builder_.Append(chunk);
+        return core_->Append(chunk);
     }
 
     auto rs = core_->CloseBlock(nullptr);
     if (!rs.ok())
         return rs;
 
-    return core_->builder_.Append(chunk);
+    return core_->Append(chunk);
 }
 
 base::Status TableBuilder::Finalize() {
