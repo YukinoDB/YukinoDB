@@ -73,7 +73,7 @@ Comparator *CreateBytewiseComparator() {
 
 Comparator *BytewiseCompartor() {
     std::call_once(create_bytewise_comparator_once, [] () {
-        DCHECK_EQ(nullptr, bytewise_comparator);
+        DCHECK(NULL == bytewise_comparator);
 
         bytewise_comparator = CreateBytewiseComparator();
     });

@@ -210,7 +210,7 @@ TEST_F(BlockBuilderTest, BlockIterating) {
     BlockHandle handle(0);
     builder_->Finalize(kTypeData, &handle);
 
-    std::unique_ptr<Comparator> comparator(CreateBitwiseComparator());
+    std::unique_ptr<Comparator> comparator(CreateBytewiseComparator());
     BlockIterator iter(comparator.get(), buf_->buf().data(), buf_->buf().size());
     EXPECT_EQ("a", iter.key().ToString());
     EXPECT_EQ("1", iter.value().ToString());
@@ -275,7 +275,7 @@ TEST_F(BlockBuilderTest, BlockSeeking) {
     BlockHandle handle(0);
     builder_->Finalize(kTypeData, &handle);
 
-    std::unique_ptr<Comparator> comparator(CreateBitwiseComparator());
+    std::unique_ptr<Comparator> comparator(CreateBytewiseComparator());
     BlockIterator iter(comparator.get(), buf_->buf().data(), buf_->buf().size());
 
     iter.Seek("a");
@@ -314,7 +314,7 @@ TEST_F(BlockBuilderTest, BlockPrefixSeeking) {
     BlockHandle handle(0);
     builder_->Finalize(kTypeData, &handle);
 
-    std::unique_ptr<Comparator> comparator(CreateBitwiseComparator());
+    std::unique_ptr<Comparator> comparator(CreateBytewiseComparator());
     BlockIterator iter(comparator.get(), buf_->buf().data(), buf_->buf().size());
 
     iter.Seek("a");
