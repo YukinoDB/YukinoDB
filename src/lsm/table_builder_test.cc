@@ -1,8 +1,6 @@
 // The YukinoDB Unit Test Suite
 //
 //  table_builder_test.cc
-//  TableBuilder
-//  YukinoDB
 //
 //  Created by Niko Bellic.
 //
@@ -50,7 +48,7 @@ public:
     std::unique_ptr<TableBuilder> builder_;
     std::unique_ptr<base::StringWriter> writer_;
 
-    static const uint32_t kBlockSize = 32;
+    static const uint32_t kBlockSize = 64;
     static const int kRestartInterval = 3;
 };
 

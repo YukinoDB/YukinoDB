@@ -146,7 +146,7 @@ class MappedMemory : public DisableCopyAssign {
 public:
     MappedMemory(const std::string &file_name, void *buf, size_t len);
     MappedMemory(MappedMemory &&other);
-    virtual ~MappedMemory() {}
+    virtual ~MappedMemory();
 
     bool Valid() const { return buf_ != nullptr && len_ > 0; }
 
@@ -159,6 +159,14 @@ public:
     }
 
     const std::string &file_name() const { return file_name_; }
+
+    static MappedMemory Attach(std::string *buf) {
+        return Attach(&buf->at(0), buf->length());
+    }
+
+    static MappedMemory Attach(void *buf, size_t len) {
+        return MappedMemory(":memory:", buf, len);
+    }
 
 protected:
     uint8_t *buf_;

@@ -41,6 +41,24 @@ uint64_t BufferedReader::ReadVarint64() {
     return rv;
 }
 
+MappedMemory::MappedMemory(const std::string &file_name, void *buf, size_t len)
+    : file_name_(file_name)
+    , buf_(static_cast<uint8_t*>(buf))
+    , len_(len) {
+}
+
+MappedMemory::MappedMemory(MappedMemory &&other)
+    : file_name_(std::move(other.file_name_))
+    , buf_(other.buf_)
+    , len_(other.len_) {
+
+    other.buf_ = nullptr;
+    other.len_ = 0;
+}
+
+MappedMemory::~MappedMemory() {
+}
+
 } // namespace base
     
 } // namespace yukino

@@ -1,13 +1,23 @@
 #include "yukino/comparator.h"
 #include "base/slice.h"
+#include "glog/logging.h"
 #include <string.h>
+#include <mutex>
 
 namespace yukino {
+
+namespace {
+
+std::once_flag create_bytewise_comparator_once;
+
+Comparator *bytewise_comparator;
+
+}
 
 Comparator::~Comparator() {
 }
 
-class BitwiseComparator : public Comparator {
+class BytewiseComparator : public Comparator {
 public:
     virtual int Compare(const base::Slice& a, const base::Slice& b) const override {
         return a.compare(b);
@@ -56,9 +66,19 @@ public:
 };
 
 
-Comparator *CreateBitwiseComparator() {
+Comparator *CreateBytewiseComparator() {
 
-    return new BitwiseComparator();
+    return new BytewiseComparator();
+}
+
+Comparator *BytewiseCompartor() {
+    std::call_once(create_bytewise_comparator_once, [] () {
+        DCHECK_EQ(nullptr, bytewise_comparator);
+
+        bytewise_comparator = CreateBytewiseComparator();
+    });
+
+    return DCHECK_NOTNULL(bytewise_comparator);
 }
 
 } // namespace yukino

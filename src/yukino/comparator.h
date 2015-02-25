@@ -50,7 +50,9 @@ public:
 
 };
 
-Comparator *CreateBitwiseComparator();
+Comparator *CreateBytewiseComparator();
+
+Comparator *BytewiseCompartor();
 
 } // namespace yukino
 
