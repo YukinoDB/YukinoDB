@@ -19,7 +19,7 @@ public:
 
     SkipList(Comparator compare)
         : compare_(compare)
-        , head_(NewNode(0, kMaxHeight))
+        , head_(NewNode(Key(), kMaxHeight))
         , max_height_(1) {
 
         for (auto i = 0; i < kMaxHeight; ++i) {
@@ -31,7 +31,7 @@ public:
         rand_ = std::bind(distribution, engine);
     }
 
-    void Put(const Key &key) {
+    void Put(Key &&key) {
         // TODO(opt): We can use a barrier-free variant of FindGreaterOrEqual()
         // here since Insert() is externally synchronized.
         Node* prev[kMaxHeight];
@@ -57,7 +57,7 @@ public:
             max_height_.store(height, std::memory_order_relaxed);
         }
 
-        x = NewNode(key, height);
+        x = NewNode(std::move(key), height);
         for (int i = 0; i < height; i++) {
             // NoBarrier_SetNext() suffices since we will add a barrier when
             // we publish a pointer to "x" in prev[i].
@@ -79,10 +79,10 @@ public:
     static const intptr_t kBranching = 4;
 private:
 
-    Node *NewNode(const Key &key, uintptr_t height) {
+    Node *NewNode(Key &&key, uintptr_t height) {
         auto chunk = new char[sizeof(Node) +
                               sizeof(std::atomic<Node *>) * (height - 1)];
-        return new (chunk) Node(key);
+        return new (chunk) Node(std::move(key));
     }
 
     Node *FindGreaterOrEqual(const Key& key, Node** prev) const {
@@ -101,6 +101,25 @@ private:
                     // Switch to next list
                     level--;
                 }
+            }
+        }
+    }
+
+    Node *FindLessThan(const Key &key) const {
+        Node* x = head_;
+        int level = max_height() - 1;
+        while (true) {
+            DCHECK(x == head_ || compare_(x->key, key) < 0);
+            Node* next = x->next(level);
+            if (next == NULL || compare_(next->key, key) >= 0) {
+                if (level == 0) {
+                    return x;
+                } else {
+                    // Switch to next list
+                    level--;
+                }
+            } else {
+                x = next;
             }
         }
     }
@@ -159,12 +178,12 @@ private:
 template <class Key, class Comparator>
 struct SkipList<Key, Comparator>::Node {
 public:
-    explicit Node(const Key &k)
-        : key(k) {
+    explicit Node(Key &&k)
+        : key(std::move(k)) {
         DCHECK(next_[0].is_lock_free());
     }
 
-    Key const key;
+    Key key;
 
     Node *next(int n) {
         DCHECK_GE(n, 0);

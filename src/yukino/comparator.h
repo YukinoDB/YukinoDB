@@ -12,7 +12,7 @@ class Slice;
 
 } // namespace base
 
-class Comparator : public base::DisableCopyAssign {
+class Comparator {
 public:
     virtual ~Comparator();
 

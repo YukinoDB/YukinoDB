@@ -1,6 +1,7 @@
 #ifndef YUKINO_LSM_CHUNK_H_
 #define YUKINO_LSM_CHUNK_H_
 
+#include "lsm/format.h"
 #include "base/slice.h"
 #include "base/base.h"
 #include <memory>
@@ -45,6 +46,50 @@ private:
 
     std::unique_ptr<char[]> packed_data_;
 };
+
+/**
+ * The internal key.
+ *
+ * +----------+
+ * | key-size | varint32
+ * +----------+
+ * | user-key |
+ * +----------+
+ * |   tag    | 8 bytes
+ * +----------+
+ * |  value   |
+ * +----------+
+ */
+class InternalKey : public Chunk {
+public:
+    explicit InternalKey() : InternalKey(nullptr, 0, 0) {}
+
+    base::Slice user_key_slice() const;
+
+    uint32_t user_key_size() const;
+
+    const char *user_key() const;
+
+    char *mutable_user_key();
+
+    Tag tag() const;
+
+    static InternalKey CreateKey(const base::Slice &key,
+                                 const base::Slice &value,
+                                 uint64_t version,
+                                 uint8_t flag);
+
+    static InternalKey CreateKey(const base::Slice &key);
+
+    static InternalKey kZero;
+
+private:
+    InternalKey(char *packed_data, uint64_t size, uint32_t key_size);
+    InternalKey(char *key, uint32_t key_size);
+
+};
+
+static_assert(sizeof(InternalKey) == sizeof(Chunk), "Fixed subclass size.");
 
 } // namespace lsm
 

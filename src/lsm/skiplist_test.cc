@@ -6,6 +6,10 @@
 //
 //
 #include "lsm/skiplist.h"
+#include "lsm/chunk.h"
+#include "lsm/format.h"
+#include "lsm/builtin.h"
+#include "yukino/comparator.h"
 #include "gtest/gtest.h"
 #include <stdio.h>
 #include <functional>
@@ -33,7 +37,7 @@ public:
 
     void Fill(int k, IntSkipList *list) {
         while (k--) {
-            list->Put(k);
+            list->Put(std::move(k));
         }
     }
 };
@@ -90,7 +94,7 @@ TEST_F(SkipListTest, ThreadingPut) {
 
         DLOG(INFO) << "start: " << start << " end: " << end;
         for (auto i = start; i < end; ++i) {
-            list->Put(i);
+            list->Put(std::move(i));
         }
     };
 
@@ -116,6 +120,46 @@ TEST_F(SkipListTest, ThreadingPut) {
         EXPECT_TRUE(iter.Valid());
         EXPECT_EQ(i, iter.key());
     }
+}
+
+TEST_F(SkipListTest, ChunkPut) {
+
+    auto comparator = [] (const InternalKey &a, const InternalKey &b) {
+        return BytewiseCompartor()->Compare(a.user_key_slice(), b.user_key_slice());
+    };
+
+    typedef SkipList<InternalKey,
+                    std::function<int(const InternalKey &, const InternalKey &)>> Table;
+    Table list(comparator);
+
+    InternalKey key[] = {
+        InternalKey::CreateKey("a", "1", 100, kFlagValue),
+        InternalKey::CreateKey("b", "2", 200, kFlagValue),
+        InternalKey::CreateKey("c", "3", 300, kFlagValue),
+    };
+
+    for (InternalKey &k : key) {
+        list.Put(std::move(k));
+    }
+
+    Table::Iterator iter(&list);
+    iter.SeekToFirst();
+    EXPECT_TRUE(iter.Valid());
+    EXPECT_EQ("a", iter.key().user_key_slice().ToString());
+    EXPECT_EQ("1", iter.key().value_slice().ToString());
+    EXPECT_EQ(100ULL, iter.key().tag().version);
+
+    iter.Next();
+    EXPECT_TRUE(iter.Valid());
+    EXPECT_EQ("b", iter.key().user_key_slice().ToString());
+    EXPECT_EQ("2", iter.key().value_slice().ToString());
+    EXPECT_EQ(200ULL, iter.key().tag().version);
+
+    iter.Next();
+    EXPECT_TRUE(iter.Valid());
+    EXPECT_EQ("c", iter.key().user_key_slice().ToString());
+    EXPECT_EQ("3", iter.key().value_slice().ToString());
+    EXPECT_EQ(300ULL, iter.key().tag().version);
 }
 
 } // namespace lsm

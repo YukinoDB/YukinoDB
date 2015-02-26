@@ -1,0 +1,53 @@
+#include "lsm/format.h"
+#include "base/io.h"
+#include "glog/logging.h"
+
+namespace yukino {
+
+namespace lsm {
+
+InternalKeyComparator::InternalKeyComparator(Comparator *delegated)
+    : delegated_(DCHECK_NOTNULL(delegated)) {
+
+}
+
+InternalKeyComparator::~InternalKeyComparator() {
+
+}
+
+int InternalKeyComparator::Compare(const base::Slice& a, const base::Slice& b) const {
+    base::BufferedReader ra(a.data(), a.size());
+    base::BufferedReader rb(b.data(), b.size());
+
+    auto size_a = ra.ReadVarint32();
+    auto size_b = rb.ReadVarint32();
+
+    auto rv = delegated_->Compare(ra.Read(size_a), rb.Read(size_b));
+    if (rv != 0) {
+        return rv;
+    }
+
+    auto tag_a = Tag::Decode(ra.ReadFixed64());
+    auto tag_b = Tag::Decode(rb.ReadFixed64());
+
+    DCHECK_EQ(0, ra.active());
+    DCHECK_EQ(0, rb.active());
+    return static_cast<int>(tag_b.version - tag_a.version);
+}
+
+const char *InternalKeyComparator::Name() const {
+    return "yukino.lsm.InternalKeyComparator";
+}
+
+void InternalKeyComparator::FindShortestSeparator(std::string* start,
+                                                  const base::Slice& limit) const {
+    return delegated_->FindShortestSeparator(start, limit);
+}
+
+void InternalKeyComparator::FindShortSuccessor(std::string* key) const {
+    return delegated_->FindShortSuccessor(key);
+}
+
+} // namespace lsm
+
+} // namespace yukino
