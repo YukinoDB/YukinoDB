@@ -43,6 +43,8 @@ public:
     bool unlimited() const { return unlimited_; }
     void SetUnlimited(bool unlimited) { unlimited_ = unlimited; }
 
+    void SetOffset(uint64_t offset) { offset_ = offset; }
+
 private:
 
     void Reset();
@@ -53,6 +55,7 @@ private:
     const int restart_interval_;
 
     uint32_t active_size_;
+    uint64_t offset_ = 0;
     int restart_count_;
 
     uint32_t last_shared_size_;
@@ -92,33 +95,37 @@ public:
     virtual ~BlockIterator();
 
     virtual bool Valid() const override;
-
     virtual void SeekToFirst() override;
-
     virtual void SeekToLast() override;
-
     virtual void Seek(const base::Slice& target) override;
-
     virtual void Next() override;
-
     virtual void Prev() override;
-
     virtual base::Slice key() const override;
-
     virtual base::Slice value() const override;
-
     virtual base::Status status() const override;
 
 private:
+    struct Pair {
+        Pair() {}
+        Pair(Pair &&other) : key(std::move(other.key)), value(other.value) {}
+
+        std::string key;
+        base::Slice value;
+    };
+
+    const uint8_t *PrepareRead(size_t i);
+    const uint8_t *Read(const std::string &prev, const uint8_t *p, Pair *rv);
+
     const Comparator *comparator_;
     const uint8_t *base_;
     const uint8_t *data_end_;
     const uint32_t *restarts_;
-    const uint8_t *current_;
     size_t num_restarts_;
-    std::string key_;
-    base::Slice value_;
     base::Status status_;
+
+    int curr_restart_ = 0;
+    int curr_local_ = 0;
+    std::vector<Pair> local_;
 };
 
 

@@ -80,6 +80,7 @@ public:
 
 private:
     MemoryTable::Table::Iterator iter_;
+
 };
 
 Iterator *MemoryTable::NewIterator() {

@@ -78,6 +78,7 @@ bool BlockBuilder::CanAppend(const Chunk &chunk) const {
 base::Status BlockBuilder::Append(const Chunk &chunk) {
     size_t add_size = 0, len = 0;
     auto should_restart = false;
+    auto head = writer_->active() - offset_;
 
     auto shared_size = CalcSharedSize(chunk.key_slice(), &should_restart);
     auto rs = writer_->WriteVarint32(shared_size, &len);
@@ -107,7 +108,7 @@ base::Status BlockBuilder::Append(const Chunk &chunk) {
     add_size += len;
 
     if (should_restart) {
-        auto restart_index = static_cast<uint32_t>(writer_->active());
+        auto restart_index = static_cast<uint32_t>(head);
 
         add_size += sizeof(restart_index);
         index_.push_back(restart_index);
@@ -229,8 +230,6 @@ BlockIterator::BlockIterator(const Comparator *comparator, const void *base,
                                                    - num_restarts_
                                                    * sizeof(uint32_t));
     data_end_ = reinterpret_cast<const uint8_t *>(restarts_);
-
-    //SeekToFirst();
 }
 
 BlockIterator::~BlockIterator() {
@@ -238,32 +237,32 @@ BlockIterator::~BlockIterator() {
 }
 
 bool BlockIterator::Valid() const {
-    return status_.ok() && current_ >= base_ && current_ <= data_end_;
+    return status_.ok() &&
+            (curr_restart_ >= 0 && curr_restart_ < num_restarts_) &&
+            (curr_local_ >= 0 && curr_local_ < local_.size());
 }
 
 void BlockIterator::SeekToFirst() {
-    current_ = base_;
-    Next();
+    PrepareRead(0);
+    curr_local_   = 0;
+    curr_restart_ = 0;
 }
 
 void BlockIterator::SeekToLast() {
-    status_ = base::Status::NotSupported("SeekToLast()");
+    PrepareRead(num_restarts_ - 1);
+    curr_local_   = static_cast<int>(local_.size()) - 1;
+    curr_restart_ = static_cast<int>(num_restarts_) - 1;
 }
 
 void BlockIterator::Seek(const base::Slice& target) {
     bool found = false;
     int32_t i;
+    Pair pair;
     for (i = static_cast<int32_t>(num_restarts_) - 1; i >= 0; i--) {
         auto entry = base_ + restarts_[i];
 
-        base::BufferedReader reader(entry, -1);
-        auto shared_size = reader.ReadVarint32(); // Ignore
-        DCHECK_EQ(0, shared_size);
-        auto unshared_size = reader.ReadVarint32();
-        reader.ReadVarint64(); // Ignore
-
-        auto unshared = reader.Read(unshared_size);
-        if (comparator_->Compare(target, unshared) >= 0) {
+        Read("", entry, &pair);
+        if (comparator_->Compare(target, pair.key) >= 0) {
             found = true;
             break;
         }
@@ -274,63 +273,92 @@ void BlockIterator::Seek(const base::Slice& target) {
         return;
     }
 
-    auto entry = base_ + restarts_[i];
-    auto end   = (i == num_restarts_ - 1) ? data_end_ : base_ + restarts_[i+1];
-
-    std::string key;
-    while (entry < end) {
-        base::BufferedReader reader(entry, -1);
-        auto shared_size = reader.ReadVarint32();
-        auto unshared_size = reader.ReadVarint32();
-        auto value_size = reader.ReadVarint64();
-
-        auto last_key = key;
-        auto unshared_key = reader.Read(unshared_size);
-        key.assign(last_key.data(), shared_size);
-        key.append(unshared_key.data(), unshared_key.size());
-        if (target.compare(key) == 0) {
-            key_ = key;
-            value_ = reader.Read(value_size);
-            current_ = reader.current();
+    PrepareRead(i);
+    for (auto j = 0; j < local_.size(); j++) {
+        if (comparator_->Compare(target, local_[j].key) == 0) {
+            curr_local_   = j;
+            curr_restart_ = i;
             return;
         }
-
-        reader.Skip(value_size);
-        entry = reader.current();
     }
 
     status_ = base::Status::NotFound("Seek()");
 }
 
 void BlockIterator::Next() {
-    base::BufferedReader reader(current_, -1);
-    uint32_t shared_size = reader.ReadVarint32();
-    uint32_t unshared_size = reader.ReadVarint32();
-    uint64_t value_size = reader.ReadVarint64();
+    if (curr_local_ >= local_.size() - 1) {
+        if (curr_restart_ < num_restarts_ - 1) {
+            PrepareRead(++curr_restart_);
+        } else {
+            ++curr_restart_;
+        }
+        curr_local_ = 0;
+        return;
+    }
 
-    auto last_key = key_;
-    auto unshared_key = reader.Read(unshared_size);
-    key_.assign(last_key.data(), shared_size);
-    key_.append(unshared_key.data(), unshared_key.size());
-    value_ = reader.Read(value_size);
-
-    current_ = reader.current();
+    curr_local_++;
 }
 
 void BlockIterator::Prev() {
-    status_ = base::Status::NotSupported("Prev()");
+    if (curr_local_ == 0) {
+        if (curr_restart_ > 0) {
+            PrepareRead(--curr_restart_);
+        } else {
+            --curr_restart_;
+        }
+        curr_local_ = static_cast<int>(local_.size()) - 1;
+        return;
+    }
+
+    --curr_local_;
 }
 
 base::Slice BlockIterator::key() const {
-    return base::Slice(key_);
+    DCHECK(Valid());
+    return base::Slice(local_[curr_local_].key);
 }
 
 base::Slice BlockIterator::value() const {
-    return value_;
+    DCHECK(Valid());
+    return local_[curr_local_].value;
 }
 
 base::Status BlockIterator::status() const {
     return status_;
+}
+
+const uint8_t *BlockIterator::PrepareRead(size_t i) {
+    DCHECK_LT(i, num_restarts_);
+
+    auto entry = base_ + restarts_[i];
+    auto end   = (i == num_restarts_ - 1) ? data_end_ : base_ + restarts_[i+1];
+
+    Pair pair;
+    std::string last_key;
+    local_.clear();
+    while (entry < end) {
+        entry = Read(last_key, entry, &pair);
+        last_key.assign(pair.key);
+
+        local_.push_back(std::move(pair));
+    }
+
+    return entry;
+}
+
+const uint8_t *BlockIterator::Read(const std::string &prev, const uint8_t *p,
+                                   Pair *rv) {
+    base::BufferedReader reader(p, -1);
+    auto shared_size = reader.ReadVarint32();
+    rv->key = prev.substr(0, shared_size);
+    auto unshared_size = reader.ReadVarint32();
+    auto value_size = reader.ReadVarint64();
+
+    auto unshared = reader.Read(unshared_size);
+    rv->key.append(unshared.data(), unshared.size());
+    rv->value = reader.Read(value_size);
+
+    return reader.current();
 }
 
 

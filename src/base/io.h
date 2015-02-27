@@ -39,7 +39,7 @@ public:
 
     virtual Status Skip(size_t count) = 0;
 
-    size_t active() const { return active_; }
+    virtual size_t active() const { return active_; }
 
 protected:
     size_t active_ = 0;
@@ -89,7 +89,7 @@ public:
     virtual Status Write(const void *data, size_t size,
                          size_t *written) override {
         checker_.Update(data, size);
-        return delegated_->Write(data, size, written);
+        return delegated_->Write(data, size, written);;
     }
 
     virtual Status Skip(size_t count) override {
@@ -107,6 +107,8 @@ public:
     Writer *delegated() const {
         return delegated_;
     }
+
+    virtual size_t active() const override { return delegated_->active(); }
 
 private:
     Writer *delegated_;

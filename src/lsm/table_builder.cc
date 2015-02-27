@@ -58,6 +58,7 @@ public:
         auto skipped = handle.NumberOfBlocks(options_.block_size) *
             options_.block_size - handle.size();
         builder_.writer()->Skip(skipped);
+        builder_.SetOffset(builder_.writer()->active());
 
         if (rv)
             *rv = handle;
