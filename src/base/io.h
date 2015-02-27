@@ -45,6 +45,41 @@ protected:
     size_t active_ = 0;
 };
 
+
+class BufferedWriter : public Writer {
+public:
+    BufferedWriter() = default;
+    BufferedWriter(size_t size) { Reserve(size); }
+    virtual ~BufferedWriter() = default;
+
+    virtual Status Write(const void *data, size_t size, size_t *written) override;
+
+    virtual Status Skip(size_t count) override;
+
+    const char *buf() const { return buf_.get(); }
+    size_t len() const { return len_; }
+    size_t cap() const { return cap_; }
+
+    char *mutable_buf() { return buf_.get(); }
+
+    char *Drop() {
+        auto droped = buf_.release();
+        len_ = 0;
+        cap_ = 0;
+        return droped;
+    }
+
+    char *tail() { return mutable_buf() + len_; }
+
+    bool Reserve(size_t size);
+private:
+    bool Advance(size_t add);
+
+    std::unique_ptr<char[]> buf_;
+    size_t len_ = 0;
+    size_t cap_ = 0;
+};
+
 template<class Checksum>
 class VerifiedWriter : public Writer {
 public:

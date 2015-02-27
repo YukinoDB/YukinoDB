@@ -11,6 +11,8 @@ namespace lsm {
 
 struct Tag {
 
+    static const auto kTagSize = sizeof(uint64_t);
+
     Tag(uint64_t v, uint8_t f)
         : version(v)
         , flag(f) {

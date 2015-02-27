@@ -51,8 +51,6 @@ private:
  * The internal key.
  *
  * +----------+
- * | key-size | varint32
- * +----------+
  * | user-key |
  * +----------+
  * |   tag    | 8 bytes
@@ -64,13 +62,15 @@ class InternalKey : public Chunk {
 public:
     explicit InternalKey() : InternalKey(nullptr, 0, 0) {}
 
-    base::Slice user_key_slice() const;
+    base::Slice user_key_slice() const {
+        return base::Slice(user_key(), user_key_size());
+    }
 
-    uint32_t user_key_size() const;
+    uint32_t user_key_size() const { return key_size() - Tag::kTagSize; }
 
-    const char *user_key() const;
+    const char *user_key() const { return key(); }
 
-    char *mutable_user_key();
+    char *mutable_user_key() { return mutable_key(); }
 
     Tag tag() const;
 
@@ -81,12 +81,11 @@ public:
 
     static InternalKey CreateKey(const base::Slice &key);
 
-    static InternalKey kZero;
+    static InternalKey CreateKey(const base::Slice &key, uint64_t version);
 
 private:
-    InternalKey(char *packed_data, uint64_t size, uint32_t key_size);
-    InternalKey(char *key, uint32_t key_size);
-
+    InternalKey(char *packed_data, uint64_t size, uint32_t user_key_size);
+    InternalKey(char *key, uint32_t user_key_size);
 };
 
 static_assert(sizeof(InternalKey) == sizeof(Chunk), "Fixed subclass size.");

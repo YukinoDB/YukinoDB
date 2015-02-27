@@ -59,6 +59,61 @@ MappedMemory::MappedMemory(MappedMemory &&other)
 MappedMemory::~MappedMemory() {
 }
 
+Status BufferedWriter::Write(const void *data, size_t size, size_t *written) {
+    if (!Advance(size)) {
+        return Status::Corruption("not enough memory.");
+    }
+
+    ::memcpy(tail(), data, size);
+    len_ += size;
+
+    if (written)
+        *written = size;
+    return Status::OK();
+}
+
+Status BufferedWriter::Skip(size_t count) {
+    if (!Advance(count)) {
+        return Status::Corruption("not enough memory.");
+    }
+
+    len_ += count;
+    return Status::OK();
+}
+
+bool BufferedWriter::Reserve(size_t size) {
+    if (size < len())
+        return false;
+
+    std::unique_ptr<char[]> buf(new char[size]);
+    if (!buf)
+        return false;
+    cap_ = size;
+    buf_ = std::move(buf);
+
+    return true;
+}
+
+bool BufferedWriter::Advance(size_t add) {
+
+    if (len() + add > cap()) {
+
+        auto res = cap();
+        while (res < len() + add) {
+            res = res * 2 + 128;
+        }
+
+        std::unique_ptr<char[]> buf(new char[res]);
+        if (!buf)
+            return false;
+
+        ::memcpy(buf.get(), buf_.get(), len_);
+        cap_ = res;
+        buf_ = std::move(buf);
+    }
+    return true;
+}
+
 } // namespace base
     
 } // namespace yukino

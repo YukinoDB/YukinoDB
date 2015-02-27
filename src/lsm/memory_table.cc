@@ -1,6 +1,7 @@
 #include "lsm/chunk.h"
 #include "lsm/memory_table.h"
 #include "lsm/format.h"
+#include "lsm/builtin.h"
 #include "yukino/iterator.h"
 #include "base/slice.h"
 #include "base/status.h"
@@ -12,11 +13,11 @@ namespace lsm {
 
 int MemoryTable::KeyComparator::operator()(const InternalKey &a,
                                            const InternalKey &b) const {
-    return comparator_->Compare(a.key_slice(), b.key_slice());
+    return comparator_.Compare(a.key_slice(), b.key_slice());
 }
 
-MemoryTable::MemoryTable(const InternalKeyComparator *comparator)
-    : comparator_(DCHECK_NOTNULL(comparator))
+MemoryTable::MemoryTable(InternalKeyComparator comparator)
+    : comparator_(comparator)
     , table_(KeyComparator(comparator)) {
 }
 
@@ -25,6 +26,33 @@ void MemoryTable::Put(const base::Slice &key, const base::Slice &value,
                       uint8_t flag) {
     auto internal_key = InternalKey::CreateKey(key, value, version, flag);
     table_.Put(std::move(internal_key));
+}
+
+base::Status MemoryTable::Get(const base::Slice &key, uint64_t version,
+                 std::string *value) {
+    Table::Iterator iter(&table_);
+
+    auto lookup_key = InternalKey::CreateKey(key, version);
+    iter.Seek(lookup_key);
+    if (!iter.Valid()) {
+        return base::Status::NotFound("MemoryTable::Get()");
+    }
+
+    auto tag = iter.key().tag();
+    switch (tag.flag) {
+    case kFlagValue:
+        value->assign(iter.key().value_slice().ToString());
+        break;
+
+    case kFlagDeletion:
+        return base::Status::NotFound("InternalKey deletion");
+
+    default:
+        DLOG(FATAL) << "noreached";
+        break;
+    }
+
+    return base::Status::OK();
 }
 
 class MemoryTableIterator : public Iterator {

@@ -19,10 +19,8 @@ int InternalKeyComparator::Compare(const base::Slice& a, const base::Slice& b) c
     base::BufferedReader ra(a.data(), a.size());
     base::BufferedReader rb(b.data(), b.size());
 
-    auto size_a = ra.ReadVarint32();
-    auto size_b = rb.ReadVarint32();
-
-    auto rv = delegated_->Compare(ra.Read(size_a), rb.Read(size_b));
+    auto rv = delegated_->Compare(ra.Read(a.size() - Tag::kTagSize),
+                                  rb.Read(b.size() - Tag::kTagSize));
     if (rv != 0) {
         return rv;
     }
