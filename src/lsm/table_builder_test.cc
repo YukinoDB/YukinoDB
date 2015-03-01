@@ -124,6 +124,47 @@ TEST_F(TableBuilderTest, SequenceAppend) {
     }
 }
 
+TEST_F(TableBuilderTest, IteratorReserve) {
+    const Chunk key[] = {
+        Chunk::CreateKeyValue("a", "1"),
+        Chunk::CreateKeyValue("aa", "2"),
+        Chunk::CreateKeyValue("aaa", "3"),
+    };
+
+    for (const auto &chunk : key) {
+        auto rs = builder_->Append(chunk);
+        ASSERT_TRUE(rs.ok()) << rs.ToString();
+    }
+
+    auto rs = builder_->Finalize();
+    ASSERT_TRUE(rs.ok());
+
+    auto mmap = base::MappedMemory::Attach(writer_->mutable_buf());
+    Table table(BytewiseCompartor(), &mmap);
+
+    rs = table.Init();
+    ASSERT_TRUE(rs.ok()) << rs.ToString();
+
+    Table::Iterator iter(&table);
+    iter.SeekToLast();
+    EXPECT_TRUE(iter.Valid());
+    EXPECT_EQ("aaa", iter.key());
+    EXPECT_EQ("3", iter.value());
+
+    iter.Prev();
+    EXPECT_TRUE(iter.Valid());
+    EXPECT_EQ("aa", iter.key());
+    EXPECT_EQ("2", iter.value());
+
+    iter.Prev();
+    EXPECT_TRUE(iter.Valid());
+    EXPECT_EQ("a", iter.key());
+    EXPECT_EQ("1", iter.value());
+
+    iter.Prev();
+    EXPECT_FALSE(iter.Valid());
+}
+
 TEST_F(TableBuilderTest, LargeBlock) {
     std::string blob_1block(kBlockSize, 'a');
     std::string blob_2block(kBlockSize * 2, 'b');

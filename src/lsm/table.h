@@ -67,29 +67,21 @@ public:
     virtual ~TableIterator();
 
     virtual bool Valid() const override;
-
     virtual void SeekToFirst() override;
-
     virtual void SeekToLast() override;
-
     virtual void Seek(const base::Slice& target) override;
-
     virtual void Next() override;
-
     virtual void Prev() override;
-
     virtual base::Slice key() const override;
-
     virtual base::Slice value() const override;
-
     virtual base::Status status() const override;
 
 private:
-    void SeekByHandle(const BlockHandle &handle);
+    void SeekByHandle(const BlockHandle &handle, bool to_first);
 
     const Table *owned_;
     std::unique_ptr<Iterator> block_iter_;
-    size_t block_idx_;
+    int64_t block_idx_;
     base::Status status_;
 };
 

@@ -346,6 +346,44 @@ TEST_F(BlockBuilderTest, BlockPrefixSeeking) {
     EXPECT_EQ("4", iter.value().ToString());
 }
 
+TEST_F(BlockBuilderTest, IteratorReserve) {
+    Chunk key[] = {
+        Chunk::CreateKeyValue("a", "1"),
+        Chunk::CreateKeyValue("ab", "2"),
+        Chunk::CreateKeyValue("abc", "3"),
+        Chunk::CreateKeyValue("abcd", "4"),
+    };
+
+    for (const auto &chunk : key) {
+        builder_->Append(chunk);
+    }
+    BlockHandle handle(0);
+    builder_->Finalize(kTypeData, &handle);
+
+    BlockIterator iter(BytewiseCompartor(), buf_->buf().data(),
+                       buf_->buf().size());
+
+    iter.SeekToLast();
+    EXPECT_TRUE(iter.Valid());
+    EXPECT_EQ("abcd", iter.key());
+    EXPECT_EQ("4", iter.value());
+
+    iter.Prev();
+    EXPECT_TRUE(iter.Valid());
+    EXPECT_EQ("abc", iter.key());
+    EXPECT_EQ("3", iter.value());
+
+    iter.Prev();
+    EXPECT_TRUE(iter.Valid());
+    EXPECT_EQ("ab", iter.key());
+    EXPECT_EQ("2", iter.value());
+
+    iter.Prev();
+    EXPECT_TRUE(iter.Valid());
+    EXPECT_EQ("a", iter.key());
+    EXPECT_EQ("1", iter.value());
+}
+
 } // namespace lsm
 
 } // namespace yukino

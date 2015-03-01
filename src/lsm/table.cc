@@ -111,11 +111,14 @@ bool TableIterator::Valid() const{
 void TableIterator::SeekToFirst() {
     block_idx_ = 0;
 
-    SeekByHandle(owned_->index_[block_idx_++].handle);
+    SeekByHandle(owned_->index_[block_idx_++].handle, true);
 }
 
 void TableIterator::SeekToLast() {
-    status_ = base::Status::NotSupported("SeekToLast()");
+    block_idx_ = owned_->index_.size();
+    DCHECK_GE(block_idx_, 0);
+
+    SeekByHandle(owned_->index_[--block_idx_].handle, false);
 }
 
 void TableIterator::Seek(const base::Slice& target) {
@@ -124,7 +127,7 @@ void TableIterator::Seek(const base::Slice& target) {
         const auto &entry = owned_->index_[i];
 
         if (owned_->comparator_->Compare(target, entry.key) <= 0) {
-            SeekByHandle(entry.handle);
+            SeekByHandle(entry.handle, true);
 
             block_iter_->Seek(target);
             return;
@@ -135,31 +138,44 @@ void TableIterator::Seek(const base::Slice& target) {
 }
 
 void TableIterator::Next() {
+    DCHECK(Valid());
+
     block_iter_->Next();
 
     if (!block_iter_->Valid()) {
 
-        if (!block_iter_->status().ok())
-            return;
-
-
         // test not eof
         if (block_idx_ < owned_->index_.size()) {
-            const auto &handle = owned_->index_[block_idx_++].handle;
-            SeekByHandle(handle);
+            const auto &handle = owned_->index_[block_idx_].handle;
+            SeekByHandle(handle, true);
         }
+        block_idx_++;
     }
 }
 
 void TableIterator::Prev() {
-    status_ = base::Status::NotSupported("Prev()");
+    DCHECK(Valid());
+
+    block_iter_->Prev();
+
+    if (!block_iter_->Valid()) {
+
+        if (block_idx_ > 0) {
+            const auto &handle = owned_->index_[--block_idx_].handle;
+            SeekByHandle(handle, false);
+        } else {
+            block_idx_--;
+        }
+    }
 }
 
 base::Slice TableIterator::key() const {
+    DCHECK(Valid());
     return block_iter_->key();
 }
 
 base::Slice TableIterator::value() const {
+    DCHECK(Valid());
     return block_iter_->value();
 }
 
@@ -167,7 +183,7 @@ base::Status TableIterator::status() const {
     return status_;
 }
 
-void TableIterator::SeekByHandle(const BlockHandle &handle) {
+void TableIterator::SeekByHandle(const BlockHandle &handle, bool to_first) {
     char type = 0;
     if (!owned_->VerifyBlock(handle, &type) || type != kTypeData) {
         status_ = base::Status::IOError("Block CRC32 checksum fail!");
@@ -180,7 +196,12 @@ void TableIterator::SeekByHandle(const BlockHandle &handle) {
                                                            block_base,
                                                            handle.size()));
     block_iter_.swap(block_iter);
-    block_iter_->SeekToFirst();
+
+    if (to_first) {
+        block_iter_->SeekToFirst();
+    } else {
+        block_iter_->SeekToLast();
+    }
 }
 
 } // namespace lsm

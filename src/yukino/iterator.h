@@ -14,6 +14,11 @@ class Status;
 
 class Iterator : public base::DisableCopyAssign {
 public:
+    enum Direction {
+        kForward,
+        kReserve,
+    };
+
     Iterator();
     virtual ~Iterator();
 
