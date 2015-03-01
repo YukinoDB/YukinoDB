@@ -123,8 +123,8 @@ private:
     size_t num_restarts_;
     base::Status status_;
 
-    int curr_restart_ = 0;
-    int curr_local_ = 0;
+    int64_t curr_restart_ = 0;
+    int64_t curr_local_ = 0;
     std::vector<Pair> local_;
 };
 

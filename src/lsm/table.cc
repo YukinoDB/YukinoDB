@@ -63,7 +63,8 @@ bool Table::VerifyBlock(const BlockHandle &handle, char *type) const {
 
     auto verified = crc32.digest();
 
-    base::BufferedReader reader(mmap_->buf(handle.offset() + handle.size() - kTrailerSize), kTrailerSize);
+    base::BufferedReader reader(mmap_->buf(handle.offset() + handle.size() -
+                                           kTrailerSize), kTrailerSize);
     *type = reader.ReadByte();
 
     return verified == reader.ReadFixed32();
@@ -96,8 +97,6 @@ base::Status Table::LoadIndex(const BlockHandle &index_handle,
 
 TableIterator::TableIterator(const Table *table)
     : owned_(DCHECK_NOTNULL(table)) {
-
-    //SeekToFirst();
 }
 
 TableIterator::~TableIterator() {
@@ -105,30 +104,35 @@ TableIterator::~TableIterator() {
 }
 
 bool TableIterator::Valid() const{
-    return status_.ok() && block_iter_ && block_iter_->Valid();
+    return status_.ok() &&
+        (block_idx_ >= 0 && block_idx_ < owned_->index_.size()) &&
+        block_iter_ && block_iter_->Valid();
 }
 
 void TableIterator::SeekToFirst() {
     block_idx_ = 0;
-
-    SeekByHandle(owned_->index_[block_idx_++].handle, true);
+    direction_ = kForward;
+    SeekByHandle(owned_->index_[block_idx_].handle, true);
 }
 
 void TableIterator::SeekToLast() {
-    block_idx_ = owned_->index_.size();
-    DCHECK_GE(block_idx_, 0);
+    block_idx_ = owned_->index_.size() - 1;
+    direction_ = kReserve;
 
-    SeekByHandle(owned_->index_[--block_idx_].handle, false);
+    if (block_idx_ >= 0) {
+        SeekByHandle(owned_->index_[block_idx_].handle, false);
+    }
 }
 
 void TableIterator::Seek(const base::Slice& target) {
-    // TODO:
+    direction_ = kForward;
+
     for (size_t i = 0; i < owned_->index_.size(); ++i) {
         const auto &entry = owned_->index_[i];
 
         if (owned_->comparator_->Compare(target, entry.key) <= 0) {
             SeekByHandle(entry.handle, true);
-
+            block_idx_ = i;
             block_iter_->Seek(target);
             return;
         }
@@ -140,22 +144,25 @@ void TableIterator::Seek(const base::Slice& target) {
 void TableIterator::Next() {
     DCHECK(Valid());
 
+    direction_ = kForward;
     block_iter_->Next();
 
     if (!block_iter_->Valid()) {
 
         // test not eof
-        if (block_idx_ < owned_->index_.size()) {
-            const auto &handle = owned_->index_[block_idx_].handle;
+        if (block_idx_ < owned_->index_.size() - 1) {
+            const auto &handle = owned_->index_[++block_idx_].handle;
             SeekByHandle(handle, true);
+        } else {
+            block_idx_++;
         }
-        block_idx_++;
     }
 }
 
 void TableIterator::Prev() {
     DCHECK(Valid());
 
+    direction_ = kReserve;
     block_iter_->Prev();
 
     if (!block_iter_->Valid()) {

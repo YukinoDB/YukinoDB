@@ -250,8 +250,8 @@ void BlockIterator::SeekToFirst() {
 
 void BlockIterator::SeekToLast() {
     PrepareRead(num_restarts_ - 1);
-    curr_local_   = static_cast<int>(local_.size()) - 1;
-    curr_restart_ = static_cast<int>(num_restarts_) - 1;
+    curr_local_   = static_cast<int64_t>(local_.size()) - 1;
+    curr_restart_ = static_cast<int64_t>(num_restarts_) - 1;
 }
 
 void BlockIterator::Seek(const base::Slice& target) {
@@ -306,7 +306,7 @@ void BlockIterator::Prev() {
         } else {
             --curr_restart_;
         }
-        curr_local_ = static_cast<int>(local_.size()) - 1;
+        curr_local_ = static_cast<int64_t>(local_.size()) - 1;
         return;
     }
 

@@ -163,6 +163,14 @@ TEST_F(TableBuilderTest, IteratorReserve) {
 
     iter.Prev();
     EXPECT_FALSE(iter.Valid());
+
+    iter.SeekToFirst();
+    EXPECT_TRUE(iter.Valid());
+    EXPECT_EQ("a", iter.key());
+    EXPECT_EQ("1", iter.value());
+
+    iter.Prev();
+    EXPECT_FALSE(iter.Valid());
 }
 
 TEST_F(TableBuilderTest, LargeBlock) {

@@ -382,6 +382,21 @@ TEST_F(BlockBuilderTest, IteratorReserve) {
     EXPECT_TRUE(iter.Valid());
     EXPECT_EQ("a", iter.key());
     EXPECT_EQ("1", iter.value());
+
+    iter.SeekToFirst();
+    EXPECT_TRUE(iter.Valid());
+    EXPECT_EQ("a", iter.key());
+    EXPECT_EQ("1", iter.value());
+
+    iter.Prev();
+    EXPECT_FALSE(iter.Valid());
+
+    iter.SeekToFirst();
+    iter.Next();
+    iter.Prev();
+    EXPECT_TRUE(iter.Valid());
+    EXPECT_EQ("a", iter.key());
+    EXPECT_EQ("1", iter.value());
 }
 
 } // namespace lsm

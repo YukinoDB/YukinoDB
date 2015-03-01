@@ -83,6 +83,7 @@ private:
     std::unique_ptr<Iterator> block_iter_;
     int64_t block_idx_;
     base::Status status_;
+    Direction direction_ = kForward;
 };
 
 
