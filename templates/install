@@ -2,5 +2,5 @@
 
 TARGET='/Applications/Xcode.app/Contents/Developer/Library/Xcode/Templates/File Templates/Source'
 
-cp -r 'Yukino-Google Test Suite.xctemplate' $TARGET
-cp -r 'Yukino-Google Test Simple Suite.xctemplate' $TARGET
+cp -r 'Yukino-Google Test Suite.xctemplate' "$TARGET"
+cp -r 'Yukino-Google Test Simple Suite.xctemplate' "$TARGET"

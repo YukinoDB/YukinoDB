@@ -83,6 +83,9 @@ private:
 
 };
 
+Iterator *EmptyIterator();
+
+Iterator *CreateErrorIterator(const base::Status &err);
 
 } // namespace yukino
 
