@@ -110,7 +110,7 @@ TEST_F(MergerTest, Sanity) {
     EXPECT_FALSE(merger->Valid());
 }
 
-TEST_F(MergerTest, MergingSeek) {
+TEST_F(MergerTest, MergingForward) {
     auto iter1 = new IteratorMock {
         "b",
         "bb",
@@ -138,8 +138,66 @@ TEST_F(MergerTest, MergingSeek) {
     EXPECT_FALSE(merger->Valid());
 }
 
-TEST_F(MergerTest, MergeOne) {
+TEST_F(MergerTest, SeekReserve) {
 
+    Iterator *iters[] = {
+        new IteratorMock {
+            "cc",
+            "ccc",
+        },
+
+        new IteratorMock {
+            "c",
+            "cccc",
+        },
+
+        new IteratorMock {
+            "ccccc",
+            "cccccc",
+        },
+    };
+    std::unique_ptr<Iterator> merger(CreateMergingIterator(BytewiseCompartor(),
+                                                           iters, 3));
+
+    merger->SeekToLast();
+    EXPECT_TRUE(merger->Valid());
+    EXPECT_EQ("cccccc", merger->key());
+
+    merger->Prev();
+    EXPECT_TRUE(merger->Valid());
+    EXPECT_EQ("ccccc", merger->key());
+
+    auto i = 4;
+    while (i--) {
+        merger->Prev();
+        EXPECT_TRUE(merger->Valid());
+    }
+    EXPECT_EQ("c", merger->key());
+}
+
+TEST_F(MergerTest, MergeOne) {
+    Iterator *iters[1] = {
+        new IteratorMock {
+            "a",
+            "aa",
+            "aaa",
+        },
+    };
+
+    std::unique_ptr<Iterator> merger(CreateMergingIterator(BytewiseCompartor(),
+                                                           iters, 1));
+    EXPECT_NE(nullptr, dynamic_cast<IteratorMock*>(merger.get()));
+    EXPECT_EQ(merger.get(), iters[0]);
+}
+
+TEST_F(MergerTest, MergeZero) {
+    std::unique_ptr<Iterator> merger(CreateMergingIterator(BytewiseCompartor(),
+                                                           nullptr, 0));
+    merger->SeekToFirst();
+    EXPECT_FALSE(merger->Valid());
+
+    merger->SeekToFirst();
+    EXPECT_FALSE(merger->Valid());
 }
 
 } // namespace lsm

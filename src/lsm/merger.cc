@@ -224,7 +224,7 @@ Iterator *CreateMergingIterator(Comparator *comparator, Iterator **children,
                                 size_t n) {
     switch (n) {
     case 0:
-        return EmptyIterator();
+        return CreateErrorIterator(base::Status::OK());
 
     case 1:
         return DCHECK_NOTNULL(children[0]);

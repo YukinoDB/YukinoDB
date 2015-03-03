@@ -11,7 +11,9 @@ namespace lsm {
 
 struct Tag {
 
-    static const auto kTagSize = sizeof(uint64_t);
+    typedef uint64_t RawType;
+
+    static const auto kTagSize = sizeof(RawType);
 
     Tag(uint64_t v, uint8_t f)
         : version(v)
@@ -24,12 +26,12 @@ struct Tag {
     // kFlagDeletion
     uint8_t  flag;
 
-    uint64_t Encode() {
+    RawType Encode() {
         DCHECK_LT(version, 1ULL << 57);
         return (version << 8) | flag;
     }
 
-    static Tag Decode(uint64_t tag) {
+    static Tag Decode(RawType tag) {
         return Tag(tag >> 8, tag & 0xffULL);
     }
 };
