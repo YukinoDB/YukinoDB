@@ -269,19 +269,25 @@ void BlockIterator::Seek(const base::Slice& target) {
     }
 
     if (!found) {
-        status_ = base::Status::NotFound("Seek()");
-        return;
+        i = 0;
     }
 
     PrepareRead(i);
     for (auto j = 0; j < local_.size(); j++) {
-        if (comparator_->Compare(target, local_[j].key) == 0) {
+        if (comparator_->Compare(target, local_[j].key) <= 0) {
             curr_local_   = j;
             curr_restart_ = i;
             return;
         }
     }
 
+    // 0 6
+    // 1 5
+    // 1 4
+    // 1 3
+    // ----> 2 6
+    // 2 2
+    // 2 1
     status_ = base::Status::NotFound("Seek()");
 }
 

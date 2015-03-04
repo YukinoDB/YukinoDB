@@ -17,12 +17,13 @@ class TableBuilder;
 class Compactor : public base::DisableCopyAssign {
 public:
 
-    Compactor(InternalKeyComparator comparator);
+    Compactor(InternalKeyComparator comparator, uint64_t oldest);
 
     base::Status Compact(Iterator **children, size_t n, TableBuilder *builder);
 
 private:
     InternalKeyComparator comparator_;
+    const uint64_t oldest_;
 };
 
 } // namespace lsm

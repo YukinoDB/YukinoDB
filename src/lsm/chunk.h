@@ -21,6 +21,8 @@ public:
     Chunk(Chunk &&);
     ~Chunk();
 
+    void operator = (Chunk &&other);
+
     base::Slice key_slice() const { return base::Slice(key(), key_size()); }
 
     base::Slice value_slice() const {

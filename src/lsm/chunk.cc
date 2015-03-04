@@ -30,6 +30,12 @@ Chunk::Chunk(Chunk &&other)
 Chunk::~Chunk() {
 }
 
+void Chunk::operator = (Chunk &&other) {
+    size_        = other.size_;
+    key_size_    = other.key_size_;
+    packed_data_ = std::move(other.packed_data_);
+}
+
 /*static*/ Chunk Chunk::CreateKey(const base::Slice &key) {
     char *dup = new char[key.size()];
 
