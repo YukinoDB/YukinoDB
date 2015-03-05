@@ -17,36 +17,16 @@ TEST(EnvImplTest, Sanity) {
     ASSERT_NE(nullptr, env);
 }
 
-class ScopedDeletion {
-public:
-    ScopedDeletion(const std::string &fname)
-        : fname_(fname) {
-        EnsureFileExist(fname);
-    }
-
-    ~ScopedDeletion() {
-        EnsureDeleteFile();
-    }
-
-    void EnsureFileExist(const std::string &fname) {
-        ASSERT_TRUE(Env::Default()->FileExists(fname));
-    }
-
-    void EnsureDeleteFile() {
-        ASSERT_TRUE(Env::Default()->DeleteFile(fname_).ok());
-    }
-
-private:
-    std::string fname_;
-};
-
 TEST(EnvImplTest, FileReadWrite) {
     base::AppendFile *afile = nullptr;
 
     static const auto file_name = "env_test.tmp";
     auto rs = Env::Default()->CreateAppendFile(file_name, &afile);
     ASSERT_TRUE(rs.ok());
-    ScopedDeletion scoped(file_name);
+    auto defer = base::Defer([&]() {
+        rs = Env::Default()->DeleteFile(file_name, false);
+        EXPECT_TRUE(rs.ok()) << rs.ToString();
+    });
 
     std::unique_ptr<base::AppendFile> writer(afile);
 
@@ -75,6 +55,40 @@ TEST(EnvImplTest, FileReadWrite) {
     EXPECT_EQ(199, buf.ReadFixed32());
     EXPECT_EQ(201, buf.ReadFixed32());
     reader->Close();
+}
+
+TEST(EnvImplTest, Directory) {
+    static const auto root = "env_test_root";
+
+    auto rs = Env::Default()->CreateDir(root);
+    ASSERT_TRUE(rs.ok());
+    auto defer = base::Defer([&]() {
+        rs = Env::Default()->DeleteFile(root, true);
+        EXPECT_TRUE(rs.ok()) << rs.ToString();
+    });
+
+    std::string name(root);
+    name.append("/");
+    name.append("1");
+
+    rs = Env::Default()->CreateDir(name);
+    ASSERT_TRUE(rs.ok());
+
+    name.assign(root);
+    name.append("/");
+    name.append("2");
+
+    rs = Env::Default()->CreateDir(name);
+    ASSERT_TRUE(rs.ok());
+
+    std::vector<std::string> children;
+    rs = Env::Default()->GetChildren(root, &children);
+    ASSERT_TRUE(rs.ok());
+
+    EXPECT_EQ(2, children.size());
+    EXPECT_EQ("1", children[0]);
+    EXPECT_EQ("2", children[1]);
+
 }
 
 } // namespace yukino

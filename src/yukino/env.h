@@ -4,6 +4,7 @@
 #include "base/status.h"
 #include "base/base.h"
 #include <string>
+#include <vector>
 
 namespace yukino {
 
@@ -50,8 +51,25 @@ public:
     // Returns true iff the named file exists.
     virtual bool FileExists(const std::string& fname) = 0;
 
-    // Delete the named file.
-    virtual base::Status DeleteFile(const std::string& fname) = 0;
+    // Delete the named file or directory.
+    virtual base::Status DeleteFile(const std::string& fname, bool deep) = 0;
+
+    // Store in *result the names of the children of the specified directory.
+    // The names are relative to "dir".
+    // Original contents of *results are dropped.
+    virtual base::Status GetChildren(const std::string& dir,
+                                     std::vector<std::string>* result) = 0;
+
+    // Create the specified directory.
+    virtual base::Status CreateDir(const std::string& dirname) = 0;
+
+    // Store the size of fname in *file_size.
+    virtual base::Status GetFileSize(const std::string& fname,
+                                     uint64_t* file_size) = 0;
+
+    // Rename file src to target.
+    virtual base::Status RenameFile(const std::string& src,
+                                    const std::string& target) = 0;
 
 }; // class Env
 

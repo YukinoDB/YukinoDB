@@ -121,7 +121,8 @@ public:
             return rs;
         }
 
-        auto buf = ::mmap(nullptr, stub.st_size, PROT_READ|PROT_WRITE, MAP_FILE|MAP_PRIVATE, fd, 0);
+        auto buf = ::mmap(nullptr, stub.st_size, PROT_READ|PROT_WRITE,
+                          MAP_FILE|MAP_PRIVATE, fd, 0);
         if (reinterpret_cast<intptr_t>(buf) < 0) {
             auto rs = Return(-1);
             close(fd);

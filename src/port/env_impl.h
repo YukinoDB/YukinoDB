@@ -2,6 +2,8 @@
 #define YUKINO_PORT_ENV_IMPL_H_
 
 #include "yukino/env.h"
+#include "base/status.h"
+#include <errno.h>
 
 namespace yukino {
 
@@ -18,7 +20,17 @@ public:
                                                 base::MappedMemory **file) override;
 
     virtual bool FileExists(const std::string& fname) override;
-    virtual base::Status DeleteFile(const std::string& fname) override;
+    virtual base::Status DeleteFile(const std::string& fname, bool deep) override;
+    virtual base::Status GetChildren(const std::string& dir,
+                                     std::vector<std::string>* result) override;
+    virtual base::Status CreateDir(const std::string& dirname) override;
+    virtual base::Status GetFileSize(const std::string& fname,
+                                     uint64_t* file_size) override;
+    virtual base::Status RenameFile(const std::string& src,
+                                    const std::string& target) override;
+
+private:
+    base::Status Error() { return base::Status::IOError(strerror(errno)); }
 };
 
 } // namespace port

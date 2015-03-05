@@ -1,6 +1,8 @@
 #ifndef YUKI_BASE_BASE_H
 #define YUKI_BASE_BASE_H
 
+#include <utility>
+
 namespace yukino {
 
 namespace base {
@@ -8,13 +10,26 @@ namespace base {
 class DisableCopyAssign {
 public:
     DisableCopyAssign() = default;
-
     DisableCopyAssign(const DisableCopyAssign &) = delete;
-
     void operator = (const DisableCopyAssign &) = delete;
 
 }; // class DisableCopyAssign
 
+template<class Callback>
+class AtScope : public DisableCopyAssign {
+public:
+    AtScope(Callback callback, int) : callback_(callback) {}
+    AtScope(AtScope &&other) : callback_(std::move(callback_)) {}
+    ~AtScope() { callback_(); }
+
+private:
+    Callback callback_;
+};
+
+template<class Callback>
+inline AtScope<Callback> Defer(Callback &&callback) {
+    return AtScope<Callback>( callback, 0 );
+}
 
 // clz - count leading zero
 #define YK_CLZ64(n)  \
