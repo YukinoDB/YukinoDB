@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		2304D8CC1AA7F703004C8251 /* env.cc in Sources */ = {isa = PBXBuildFile; fileRef = 2304D8CB1AA7F703004C8251 /* env.cc */; };
+		2304D8E01AA80815004C8251 /* env_impl_posix.cc in Sources */ = {isa = PBXBuildFile; fileRef = 2304D8DD1AA80815004C8251 /* env_impl_posix.cc */; };
+		2304D8E21AA80831004C8251 /* io_impl_posix.cc in Sources */ = {isa = PBXBuildFile; fileRef = 2304D8E11AA80831004C8251 /* io_impl_posix.cc */; };
+		2304D8E41AA8335B004C8251 /* env_impl_test.cc in Sources */ = {isa = PBXBuildFile; fileRef = 2304D8E31AA8335B004C8251 /* env_impl_test.cc */; };
 		23100A0C1A1F2D1700DE06DD /* libgtest_main.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 23FE66CD1A1F206B005C7568 /* libgtest_main.a */; };
 		23100A0D1A1F2D1700DE06DD /* libgtest.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 23FE66CB1A1F206B005C7568 /* libgtest.a */; };
 		23681CB11A9F04E7002721BE /* skiplist_test.cc in Sources */ = {isa = PBXBuildFile; fileRef = 23681CB01A9F04E7002721BE /* skiplist_test.cc */; };
@@ -134,6 +138,12 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		2304D8CB1AA7F703004C8251 /* env.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = env.cc; sourceTree = "<group>"; };
+		2304D8DD1AA80815004C8251 /* env_impl_posix.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = env_impl_posix.cc; path = src/port/env_impl_posix.cc; sourceTree = "<group>"; };
+		2304D8DE1AA80815004C8251 /* env_impl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = env_impl.h; path = src/port/env_impl.h; sourceTree = "<group>"; };
+		2304D8DF1AA80815004C8251 /* io_impl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = io_impl.h; path = src/port/io_impl.h; sourceTree = "<group>"; };
+		2304D8E11AA80831004C8251 /* io_impl_posix.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = io_impl_posix.cc; path = src/port/io_impl_posix.cc; sourceTree = "<group>"; };
+		2304D8E31AA8335B004C8251 /* env_impl_test.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = env_impl_test.cc; path = src/port/env_impl_test.cc; sourceTree = SOURCE_ROOT; };
 		23681CA61A9EB2C3002721BE /* skiplist.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = skiplist.h; sourceTree = "<group>"; };
 		23681CB01A9F04E7002721BE /* skiplist_test.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = skiplist_test.cc; path = src/lsm/skiplist_test.cc; sourceTree = SOURCE_ROOT; };
 		23681CB21A9F486E002721BE /* format.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = format.h; sourceTree = "<group>"; };
@@ -207,9 +217,21 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		2304D8D61AA800BE004C8251 /* port */ = {
+			isa = PBXGroup;
+			children = (
+				2304D8DF1AA80815004C8251 /* io_impl.h */,
+				2304D8E11AA80831004C8251 /* io_impl_posix.cc */,
+				2304D8DE1AA80815004C8251 /* env_impl.h */,
+				2304D8DD1AA80815004C8251 /* env_impl_posix.cc */,
+			);
+			name = port;
+			sourceTree = "<group>";
+		};
 		23B694D51A821FFA00E711E4 /* src */ = {
 			isa = PBXGroup;
 			children = (
+				2304D8D61AA800BE004C8251 /* port */,
 				23B694D81A82204100E711E4 /* base */,
 				23B694D71A82201A00E711E4 /* lsm */,
 				23B694D61A82201100E711E4 /* yukino */,
@@ -225,6 +247,7 @@
 				23B694DB1A82207300E711E4 /* db.cc */,
 				23B694DC1A82207300E711E4 /* db.h */,
 				23B694DD1A82207300E711E4 /* env.h */,
+				2304D8CB1AA7F703004C8251 /* env.cc */,
 				23B694DE1A82207300E711E4 /* options.cc */,
 				23B694DF1A82207300E711E4 /* options.h */,
 				23B694E01A82207300E711E4 /* read_options.cc */,
@@ -317,6 +340,7 @@
 				23681CB91A9F6575002721BE /* memory_table_test.cc */,
 				23EEF9A61AA5854C0003C37C /* merger_test.cc */,
 				23EEF9B61AA5FC4E0003C37C /* compactor_test.cc */,
+				2304D8E31AA8335B004C8251 /* env_impl_test.cc */,
 			);
 			path = unittest;
 			sourceTree = "<group>";
@@ -486,7 +510,9 @@
 				23CD83FD1A8A09DF00D64229 /* comparator.cc in Sources */,
 				23681CB81A9F5E70002721BE /* memory_table.cc in Sources */,
 				23CD83F81A89D3FD00D64229 /* iterator.cc in Sources */,
+				2304D8E01AA80815004C8251 /* env_impl_posix.cc in Sources */,
 				23B694ED1A82207300E711E4 /* write_options.cc in Sources */,
+				2304D8CC1AA7F703004C8251 /* env.cc in Sources */,
 				23B694F11A831BCA00E711E4 /* crc32.c in Sources */,
 				23CD83E41A845C6F00D64229 /* varint_encoding.cc in Sources */,
 				23CD83E61A845F9400D64229 /* varint_encoding_test.cc in Sources */,
@@ -501,6 +527,8 @@
 				23CD83DF1A834E7700D64229 /* table_builder.cc in Sources */,
 				23EEF9A71AA5854C0003C37C /* merger_test.cc in Sources */,
 				23B694E91A82207300E711E4 /* db.cc in Sources */,
+				2304D8E41AA8335B004C8251 /* env_impl_test.cc in Sources */,
+				2304D8E21AA80831004C8251 /* io_impl_posix.cc in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

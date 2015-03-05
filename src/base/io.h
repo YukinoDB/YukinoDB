@@ -185,6 +185,9 @@ public:
     MappedMemory(MappedMemory &&other);
     virtual ~MappedMemory();
 
+    virtual base::Status Close();
+    virtual base::Status Sync(size_t offset, size_t len);
+
     bool Valid() const { return buf_ != nullptr && len_ > 0; }
 
     size_t size() const { return len_; }
@@ -211,6 +214,15 @@ protected:
 
 private:
     std::string file_name_;
+};
+
+class AppendFile : public Writer {
+public:
+    virtual ~AppendFile();
+
+    virtual base::Status Close() = 0;
+    virtual base::Status Flush() = 0;
+    virtual base::Status Sync() = 0;
 };
 
 } // namespace base

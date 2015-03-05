@@ -1,5 +1,6 @@
 #include "base/io.h"
 #include "base/varint_encoding.h"
+#include <stdio.h>
 
 namespace yukino {
 
@@ -59,6 +60,14 @@ MappedMemory::MappedMemory(MappedMemory &&other)
 MappedMemory::~MappedMemory() {
 }
 
+base::Status MappedMemory::Close() {
+    return base::Status::OK();
+}
+
+base::Status MappedMemory::Sync(size_t, size_t) {
+    return base::Status::OK();
+}
+
 Status BufferedWriter::Write(const void *data, size_t size, size_t *written) {
     if (!Advance(size)) {
         return Status::Corruption("not enough memory.");
@@ -112,6 +121,9 @@ bool BufferedWriter::Advance(size_t add) {
         buf_ = std::move(buf);
     }
     return true;
+}
+
+AppendFile::~AppendFile() {
 }
 
 } // namespace base
