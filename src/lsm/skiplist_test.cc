@@ -92,7 +92,6 @@ TEST_F(SkipListTest, ThreadingPut) {
         std::unique_lock<std::mutex> lock(m);
         cv.wait(lock);
 
-        DLOG(INFO) << "start: " << start << " end: " << end;
         for (auto i = start; i < end; ++i) {
             list->Put(std::move(i));
         }
