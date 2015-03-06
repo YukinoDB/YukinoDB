@@ -38,21 +38,32 @@ public:
         if (written) {
             *written = rv;
         }
+
+        active_ += rv;
         return base::Status::OK();
     }
 
     virtual base::Status Skip(size_t count) override {
-        return Return(fseek(file_, count, SEEK_CUR));
+        if (fseek(file_, count, SEEK_CUR) < 0) {
+            return Error();
+        }
+        active_ += count;
+        return base::Status::OK();
     }
 
     virtual base::Status Close() {
-        auto rv = fclose(DCHECK_NOTNULL(file_));
+        if (fclose(DCHECK_NOTNULL(file_)) < 0) {
+            return Error();
+        }
         file_ = nullptr;
-        return Return(rv);
+        return base::Status::OK();
     }
 
     virtual base::Status Flush() {
-        return Return(fflush(file_));
+        if (fflush(file_) < 0) {
+            return Error();
+        }
+        return base::Status::OK();
     }
 
     virtual base::Status Sync() {
@@ -60,15 +71,17 @@ public:
         if (!rs.ok()) {
             return rs;
         }
-        return Return(fsync(fileno(file_)));
+        if (fsync(fileno(file_)) < 0) {
+            return Error();
+        }
+        return base::Status::OK();
     }
 
 private:
     AppendFileImpl(FILE *file) : file_(DCHECK_NOTNULL(file)) {}
 
-    base::Status Return(int rv) {
-        return rv < 0 ? base::Status::IOError(strerror(errno)) :
-            base::Status::OK();
+    base::Status Error() {
+        return base::Status::IOError(strerror(errno));
     }
     
     FILE *file_ = nullptr;

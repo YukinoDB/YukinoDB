@@ -19,6 +19,8 @@
 		23681CBA1A9F6575002721BE /* memory_table_test.cc in Sources */ = {isa = PBXBuildFile; fileRef = 23681CB91A9F6575002721BE /* memory_table_test.cc */; };
 		23681CC81AA34D9D002721BE /* merger.cc in Sources */ = {isa = PBXBuildFile; fileRef = 23681CC71AA34D9D002721BE /* merger.cc */; };
 		2373CF961AA94FED0073B668 /* ref_counted_test.cc in Sources */ = {isa = PBXBuildFile; fileRef = 2373CF951AA94FED0073B668 /* ref_counted_test.cc */; };
+		237ECB071AA9DB7C00EF7FB1 /* db_impl.cc in Sources */ = {isa = PBXBuildFile; fileRef = 237ECB061AA9DB7C00EF7FB1 /* db_impl.cc */; };
+		237ECB131AA9E56300EF7FB1 /* write_batch.cc in Sources */ = {isa = PBXBuildFile; fileRef = 237ECB121AA9E56300EF7FB1 /* write_batch.cc */; };
 		2380F6271A106F3B00B1EA97 /* base_test.cc in Sources */ = {isa = PBXBuildFile; fileRef = 2380F6261A106F3B00B1EA97 /* base_test.cc */; };
 		23B694E91A82207300E711E4 /* db.cc in Sources */ = {isa = PBXBuildFile; fileRef = 23B694DB1A82207300E711E4 /* db.cc */; };
 		23B694EA1A82207300E711E4 /* options.cc in Sources */ = {isa = PBXBuildFile; fileRef = 23B694DE1A82207300E711E4 /* options.cc */; };
@@ -156,6 +158,9 @@
 		23681CC71AA34D9D002721BE /* merger.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = merger.cc; sourceTree = "<group>"; };
 		2373CF941AA946F30073B668 /* ref_counted.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ref_counted.h; sourceTree = "<group>"; };
 		2373CF951AA94FED0073B668 /* ref_counted_test.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ref_counted_test.cc; path = src/base/ref_counted_test.cc; sourceTree = SOURCE_ROOT; };
+		237ECB061AA9DB7C00EF7FB1 /* db_impl.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = db_impl.cc; sourceTree = "<group>"; };
+		237ECB111AA9DC5300EF7FB1 /* db_impl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = db_impl.h; sourceTree = "<group>"; };
+		237ECB121AA9E56300EF7FB1 /* write_batch.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = write_batch.cc; sourceTree = "<group>"; };
 		2380F6261A106F3B00B1EA97 /* base_test.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = base_test.cc; path = src/base/base_test.cc; sourceTree = SOURCE_ROOT; };
 		23B694D91A82206100E711E4 /* base.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = base.h; sourceTree = "<group>"; };
 		23B694DA1A82207300E711E4 /* comparator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = comparator.h; sourceTree = "<group>"; };
@@ -256,6 +261,7 @@
 				23B694E01A82207300E711E4 /* read_options.cc */,
 				23B694E11A82207300E711E4 /* read_options.h */,
 				23B694E61A82207300E711E4 /* write_batch.h */,
+				237ECB121AA9E56300EF7FB1 /* write_batch.cc */,
 				23B694E71A82207300E711E4 /* write_options.cc */,
 				23B694E81A82207300E711E4 /* write_options.h */,
 				23CD83F61A89D30000D64229 /* iterator.h */,
@@ -286,6 +292,8 @@
 				23681CC71AA34D9D002721BE /* merger.cc */,
 				23EEF9B11AA5F5470003C37C /* compactor.h */,
 				23EEF9B21AA5F5BB0003C37C /* compactor.cc */,
+				237ECB061AA9DB7C00EF7FB1 /* db_impl.cc */,
+				237ECB111AA9DC5300EF7FB1 /* db_impl.h */,
 			);
 			name = lsm;
 			path = src/lsm;
@@ -511,6 +519,7 @@
 				23CD83EE1A8644B300D64229 /* block_builder_test.cc in Sources */,
 				23B694EC1A82207300E711E4 /* status.cc in Sources */,
 				23B694EA1A82207300E711E4 /* options.cc in Sources */,
+				237ECB131AA9E56300EF7FB1 /* write_batch.cc in Sources */,
 				23B694EB1A82207300E711E4 /* read_options.cc in Sources */,
 				23CD83FD1A8A09DF00D64229 /* comparator.cc in Sources */,
 				23681CB81A9F5E70002721BE /* memory_table.cc in Sources */,
@@ -519,6 +528,7 @@
 				23B694ED1A82207300E711E4 /* write_options.cc in Sources */,
 				2304D8CC1AA7F703004C8251 /* env.cc in Sources */,
 				23B694F11A831BCA00E711E4 /* crc32.c in Sources */,
+				237ECB071AA9DB7C00EF7FB1 /* db_impl.cc in Sources */,
 				23CD83E41A845C6F00D64229 /* varint_encoding.cc in Sources */,
 				23CD83E61A845F9400D64229 /* varint_encoding_test.cc in Sources */,
 				23CD83F51A89B3D200D64229 /* table_builder_test.cc in Sources */,

@@ -11,6 +11,9 @@ struct Options {
     // -------------------
     // Parameters that affect behavior
 
+    // The storage engine name
+    const char *engine_name;
+
     // Comparator used to define the order of keys in the table.
     // Default: a comparator that uses lexicographic byte-wise ordering
     //

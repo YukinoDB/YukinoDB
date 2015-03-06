@@ -19,6 +19,8 @@ public:
 
     std::string *mutable_buf() { return &buf_; }
 
+    std::string &&move_buf() { return std::move(buf_); }
+
 private:
     std::string buf_;
 };

@@ -21,16 +21,15 @@ public:
     }
 
     virtual void SetUp() override {
-        std::unique_ptr<MemoryTable> table(
+        base::Handle<MemoryTable> table(
                    new MemoryTable(InternalKeyComparator(BytewiseCompartor())));
         table_ = std::move(table);
     }
 
     virtual void TearDown() override {
-        table_.release();
     }
 
-    std::unique_ptr<MemoryTable> table_;
+    base::Handle<MemoryTable> table_;
 };
 
 TEST_F(MemoryTableTest, Sanity) {

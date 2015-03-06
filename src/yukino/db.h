@@ -2,18 +2,24 @@
 #define YUKINO_API_DB_H_
 
 #include "base/status.h"
+#include "base/base.h"
 
 namespace yukino {
+
+namespace base {
+
+class Slice;
+
+} // namespace base
 
 class Iterator;
 class ReadOptions;
 class WriteOptions;
 class WriteBatch;
-class Slice;
 class Options;
 class Snapshot;
 
-class DB {
+class DB : public base::DisableCopyAssign {
 public:
     // Open the database with the specified "name".
     // Stores a pointer to a heap-allocated database in *dbptr and returns
@@ -31,19 +37,21 @@ public:
     // and a non-OK status on error.
     // Note: consider setting options.sync = true.
     virtual base::Status Put(const WriteOptions& options,
-                             const Slice& key,
-                             const Slice& value) = 0;
+                             const base::Slice& key,
+                             const base::Slice& value) = 0;
 
     // Remove the database entry (if any) for "key".  Returns OK on
     // success, and a non-OK status on error.  It is not an error if "key"
     // did not exist in the database.
     // Note: consider setting options.sync = true.
-    virtual base::Status Delete(const WriteOptions& options, const Slice& key) = 0;
+    virtual base::Status Delete(const WriteOptions& options,
+                                const base::Slice& key) = 0;
 
     // Apply the specified updates to the database.
     // Returns OK on success, non-OK on failure.
     // Note: consider setting options.sync = true.
-    virtual base::Status Write(const WriteOptions& options, WriteBatch* updates) = 0;
+    virtual base::Status Write(const WriteOptions& options,
+                               WriteBatch* updates) = 0;
 
     // If the database contains an entry for "key" store the
     // corresponding value in *value and return OK.
@@ -53,7 +61,7 @@ public:
     //
     // May return some other Status on an error.
     virtual base::Status Get(const ReadOptions& options,
-                             const Slice& key, std::string* value) = 0;
+                             const base::Slice& key, std::string* value) = 0;
 
     // Return a heap-allocated iterator over the contents of the database.
     // The result of NewIterator() is initially invalid (caller must

@@ -3,6 +3,7 @@
 
 #include "lsm/format.h"
 #include "lsm/skiplist.h"
+#include "base/ref_counted.h"
 #include "base/status.h"
 #include "base/base.h"
 
@@ -21,7 +22,7 @@ namespace lsm {
 class Chunk;
 class InternalKey;
 
-class MemoryTable : public base::DisableCopyAssign {
+class MemoryTable : public base::ReferenceCounted<MemoryTable> {
 public:
     MemoryTable(InternalKeyComparator comparator);
 

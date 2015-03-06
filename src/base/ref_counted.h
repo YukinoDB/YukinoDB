@@ -34,7 +34,7 @@ private:
 };
 
 template <class T, class Deleter = DefautlDeleter>
-class ThreadSafeReferenceCounted : public DisableCopyAssign {
+class AtomicReferenceCounted : public DisableCopyAssign {
 public:
 
     int AddRef() const {
@@ -43,7 +43,7 @@ public:
 
     void Release() const {
         if (std::atomic_fetch_sub(&counter_, 1) == 1) {
-            Deleter::Delete(static_cast<T*>(this));
+            Deleter::Delete(static_cast<T*>(const_cast<AtomicReferenceCounted*>(this)));
         }
     }
 

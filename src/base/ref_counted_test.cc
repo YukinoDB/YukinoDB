@@ -30,6 +30,21 @@ private:
     int n_;
 };
 
+class AtomicTestStub : public base::AtomicReferenceCounted<AtomicTestStub> {
+public:
+    explicit AtomicTestStub(int *n) : n_(n) {
+    }
+
+    ~AtomicTestStub() {
+        *n_ = 1;
+    }
+
+    int n() const { return *n_; }
+
+private:
+    int *n_;
+};
+
 } // namespace
 
 TEST(ReferenceCountedTest, Sanity) {
@@ -54,6 +69,19 @@ TEST(ReferenceCountedTest, MoveReference) {
     h3 = std::move(h2);
     EXPECT_EQ(1, h3->ref_count());
     EXPECT_EQ(nullptr, h2.get());
+}
+
+TEST(ReferenceCountedTest, AtomicReference) {
+    int n = 0;
+    {
+        base::Handle<const AtomicTestStub> h1(new AtomicTestStub(&n));
+        EXPECT_EQ(1, h1->ref_count());
+
+        base::Handle<const AtomicTestStub> h2(h1);
+        EXPECT_EQ(2, h1->ref_count());
+        EXPECT_EQ(h1->ref_count(), h2->ref_count());
+    }
+    EXPECT_EQ(1, n);
 }
 
 } // namespace base

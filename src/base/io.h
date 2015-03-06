@@ -56,6 +56,14 @@ public:
 
     virtual Status Skip(size_t count) override;
 
+    Status Write(char ch) {
+        if (!Advance(1)) {
+            return Status::Corruption("not enough memory.");
+        }
+        buf_[len_++] = ch;
+        return Status::OK();
+    }
+
     const char *buf() const { return buf_.get(); }
     size_t len() const { return len_; }
     size_t cap() const { return cap_; }
@@ -67,6 +75,12 @@ public:
         len_ = 0;
         cap_ = 0;
         return droped;
+    }
+
+    void Clear() {
+        std::unique_ptr<char[]>().swap(buf_);
+        len_ = 0;
+        cap_ = 0;
     }
 
     char *tail() { return mutable_buf() + len_; }
@@ -128,6 +142,12 @@ public:
         Slice rv(typed<char>(), count);
         Advance(count);
         return rv;
+    }
+
+    char Read() {
+        auto ch = *typed<char>();
+        Advance(1);
+        return ch;
     }
 
     uint32_t ReadFixed32() {
