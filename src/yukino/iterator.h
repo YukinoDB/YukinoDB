@@ -2,6 +2,7 @@
 #define YUKINO_API_ITERATOR_H_
 
 #include "base/base.h"
+#include <functional>
 
 namespace yukino {
 
@@ -69,14 +70,11 @@ public:
     //
     // Note that unlike all of the preceding methods, this method is
     // not abstract and therefore clients should not override it.
-    typedef void (*CleanupFunction)(void* arg1, void* arg2);
-    void RegisterCleanup(CleanupFunction function, void* arg1, void* arg2);
+    void RegisterCleanup(const std::function<void()> &callback);
     
 private:
     struct Cleanup {
-        CleanupFunction function;
-        void* arg1;
-        void* arg2;
+        std::function<void()> callback;
         Cleanup* next;
     };
     Cleanup *cleanup_;

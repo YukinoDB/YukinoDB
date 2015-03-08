@@ -31,6 +31,11 @@ inline AtScope<Callback> Defer(Callback &&callback) {
     return AtScope<Callback>( callback, 0 );
 }
 
+const static size_t kKB = 1024;
+const static size_t kMB = 1024 * kKB;
+const static size_t kGB = 1024 * kMB;
+const static size_t kTB = 1024 * kGB;
+
 // clz - count leading zero
 #define YK_CLZ64(n)  \
     (!(( n ) & 0xffffffff00000000ull) ? \

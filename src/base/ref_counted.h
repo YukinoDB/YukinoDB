@@ -100,6 +100,8 @@ public:
 
     T *get() const { return naked_; }
 
+    operator bool() const { return naked_ != nullptr; }
+
 private:
     T *naked_ = nullptr;
 };

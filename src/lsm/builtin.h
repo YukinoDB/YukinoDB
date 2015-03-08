@@ -1,6 +1,7 @@
 #ifndef YUKINO_LSM_BUILTIN_H_
 #define YUKINO_LSM_BUILTIN_H_
 
+#include "base/base.h"
 #include <stddef.h>
 #include <stdint.h>
 
@@ -28,6 +29,13 @@ static const size_t kFooterFixedSize = 512;
 static const uint8_t kPaddingByte = 0xff;
 
 static const size_t kBottomFixedSize = sizeof(uint32_t); // magic number
+
+static const size_t kMaxNumberLevel0File = 10; // the max of level0 file num
+static const size_t kMaxSizeLevel0File   = 80 * base::kMB;
+
+static const int kMaxLevel = 4;
+
+static const char *kTableExtendName = "sst";
 
 
 } // namespace lsm

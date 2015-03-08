@@ -38,7 +38,7 @@ struct Tag {
 
 class InternalKeyComparator : public Comparator {
 public:
-    InternalKeyComparator(Comparator *delegated);
+    InternalKeyComparator(const Comparator *delegated);
 
     virtual ~InternalKeyComparator() override;
 
@@ -51,10 +51,10 @@ public:
 
     virtual void FindShortSuccessor(std::string* key) const override;
 
-    Comparator *delegated() const { return delegated_; }
+    const Comparator *delegated() const { return delegated_; }
 
 private:
-    Comparator *delegated_;
+    const Comparator *delegated_;
 };
 
 } // namespace lsm

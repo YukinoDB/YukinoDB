@@ -32,6 +32,8 @@ public:
     constexpr static const auto kName = "lsm";
 
 private:
+    std::string db_name_;
+
     base::Handle<MemoryTable> mutable_;
     base::Handle<MemoryTable> immtable_;
 };

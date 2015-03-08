@@ -63,7 +63,8 @@ private:
 
 class TableIterator : public Iterator {
 public:
-    TableIterator(const Table *table);
+    explicit TableIterator(const Table *table);
+
     virtual ~TableIterator();
 
     virtual bool Valid() const override;

@@ -14,20 +14,16 @@ Iterator::~Iterator() {
 
     Cleanup *p = nullptr;
     while (cleanup_) {
-        cleanup_->function(cleanup_->arg1, cleanup_->arg2);
+        cleanup_->callback();
         p = cleanup_;
         cleanup_ = cleanup_->next;
         delete p;
     }
 }
 
-void Iterator::RegisterCleanup(CleanupFunction function, void* arg1, void* arg2) {
-    DCHECK_NOTNULL(function);
-
+void Iterator::RegisterCleanup(const std::function<void()> &callback) {
     auto cleanup = new Cleanup {
-        function,
-        arg1,
-        arg2,
+        callback,
         cleanup_,
     };
     DCHECK_NOTNULL(cleanup);

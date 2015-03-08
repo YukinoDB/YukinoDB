@@ -6,7 +6,7 @@ namespace yukino {
 
 namespace lsm {
 
-InternalKeyComparator::InternalKeyComparator(Comparator *delegated)
+InternalKeyComparator::InternalKeyComparator(const Comparator *delegated)
     : delegated_(DCHECK_NOTNULL(delegated)) {
 
 }
