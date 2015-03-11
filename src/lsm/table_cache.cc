@@ -15,7 +15,7 @@ TableCache::TableCache(const std::string &db_name, const Options &options)
 
 Iterator *TableCache::CreateIterator(const ReadOptions &options,
                                      uint64_t file_number, uint64_t file_size) {
-    CacheEntry *entry = nullptr;
+    base::Handle<CacheEntry> entry;
 
     auto found = cached_.find(file_number);
     if (found == cached_.end()) {
@@ -26,15 +26,14 @@ Iterator *TableCache::CreateIterator(const ReadOptions &options,
         entry = new CacheEntry;
         auto rs = env_->CreateRandomAccessFile(buf, &entry->mmap);
         if (!rs.ok()) {
-            delete entry;
             return CreateErrorIterator(rs);
         }
         entry->file_name = buf;
         entry->table = new Table(&comparator_, entry->mmap);
 
-        cached_.emplace(entry);
+        cached_.emplace(file_number, entry);
     } else {
-        entry = found->second.get();
+        entry = found->second;
     }
 
     auto iter = new Table::Iterator(entry->table);

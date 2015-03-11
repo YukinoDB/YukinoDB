@@ -83,6 +83,8 @@ public:
 
     static InternalKey CreateKey(const base::Slice &key);
 
+    static InternalKey CreateKey(const base::Slice &key, const base::Slice &value);
+
     static InternalKey CreateKey(const base::Slice &key, uint64_t version);
 
 private:

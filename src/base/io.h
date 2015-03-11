@@ -23,9 +23,20 @@ public:
         return Write(buf.data(), buf.size(), written);
     }
 
+    // Write string with length
+    Status WriteString(const Slice &str, size_t *written);
+
     Status WriteVarint32(uint32_t value, size_t *written);
 
     Status WriteVarint64(uint64_t value, size_t *written);
+
+    Status WriteByte(uint8_t value) {
+        return Write(&value, sizeof(value), nullptr);
+    }
+
+    Status WriteFixed16(uint16_t value) {
+        return Write(&value, sizeof(value), nullptr);
+    }
 
     Status WriteFixed32(uint32_t value) {
         return Write(&value, sizeof(value), nullptr);
@@ -144,10 +155,21 @@ public:
         return rv;
     }
 
+    Slice ReadString() { return Read(ReadVarint32()); }
+
+    Slice ReadLargeString() { return Read(ReadVarint64()); }
+
     char Read() {
         auto ch = *typed<char>();
         Advance(1);
         return ch;
+    }
+
+    uint16_t ReadFixed16() {
+        DCHECK_GE(active_, sizeof(uint16_t));
+        auto rv = *typed<uint16_t>();
+        Advance(sizeof(uint16_t));
+        return rv;
     }
 
     uint32_t ReadFixed32() {
@@ -244,6 +266,11 @@ public:
     virtual base::Status Flush() = 0;
     virtual base::Status Sync() = 0;
 };
+
+base::Status WriteAll(const std::string &file_name, const base::Slice &buf,
+                      size_t *written);
+
+base::Status ReadAll(const std::string &file_name, std::string *buf);
 
 } // namespace base
 

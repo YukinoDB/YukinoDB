@@ -30,7 +30,6 @@ VersionSet::~VersionSet() {
     }
 }
 
-
 Version::Version(VersionSet *owned)
 : owned_(DCHECK_NOTNULL(owned)) {
 
@@ -43,23 +42,29 @@ Version::~Version() {
 base::Status Version::Get(const ReadOptions &options, const InternalKey &key,
                  std::string *value) {
 
-    std::vector<FileMetadata *> maybe_file;
+    std::vector<base::Handle<FileMetadata>> maybe_file;
     auto ucmp = owned_->comparator_.delegated();
     auto ukey = key.user_key_slice();
 
-    for (auto metadata : file(0)) {
+    for (const auto &metadata : file(0)) {
         if (ucmp->Compare(ukey, metadata->smallest_key.user_key_slice()) >= 0 ||
             ucmp->Compare(ukey, metadata->largest_key.user_key_slice()) <= 0) {
             maybe_file.push_back(metadata);
         }
     }
+    // The newest file should be first.
+    std::sort(maybe_file.begin(), maybe_file.end(),
+              [](const base::Handle<FileMetadata> &a,
+                 const base::Handle<FileMetadata> &b) {
+                  return a->ctime > b->ctime;
+              });
 
     for (auto i = 1; i < kMaxLevel; ++i) {
         if (file(i).empty()) {
             continue;
         }
 
-        auto metadata = file(i).at(0);
+        const auto &metadata = file(i).at(0);
         if (ucmp->Compare(ukey, metadata->smallest_key.user_key_slice()) >= 0 ||
             ucmp->Compare(ukey, metadata->largest_key.user_key_slice()) <= 0) {
             maybe_file.push_back(metadata);
@@ -80,7 +85,7 @@ base::Status Version::Get(const ReadOptions &options, const InternalKey &key,
         });
         delete merger;
     });
-    for (auto metadata : maybe_file) {
+    for (const auto &metadata : maybe_file) {
         auto iter = owned_->table_cache_->CreateIterator(options,
                                                          metadata->number,
                                                          metadata->size);
@@ -106,6 +111,69 @@ base::Status Version::Get(const ReadOptions &options, const InternalKey &key,
     }
 
     value->assign(std::move(merger->value().ToString()));
+    return base::Status::OK();
+}
+
+base::Status VersionPatch::Decode(const base::Slice &buf) {
+    base::BufferedReader rd(buf.data(), buf.size());
+
+    if (rd.ReadByte()) {
+        set_field(kComparator);
+        comparator_.assign(rd.ReadString().ToString());
+    }
+
+    if (rd.ReadByte()) {
+        set_field(kLastVersion);
+        last_version_ = rd.ReadVarint64();
+    }
+
+    if (rd.ReadByte()) {
+        set_field(kNextFileNumber);
+        next_file_number_ = rd.ReadVarint64();
+    }
+
+    if (rd.ReadByte()) {
+        set_field(kRedoLogNumber);
+        redo_log_number_ = rd.ReadVarint64();
+    }
+
+    if (rd.ReadByte()) {
+        set_field(kPrevLogNumber);
+        prev_log_number_ = rd.ReadVarint64();
+    }
+
+    if (rd.ReadByte()) {
+        set_field(kCompactionPoint);
+        compaction_level_ = static_cast<int>(rd.ReadVarint32());
+        compaction_key_ = InternalKey::CreateKey(rd.ReadString(),
+                                                 rd.ReadLargeString());
+    }
+
+    auto i = rd.ReadVarint32();
+    while (i--) {
+        DeleteFile(static_cast<int>(rd.ReadVarint32()), rd.ReadVarint64());
+    }
+
+    i = rd.ReadVarint32();
+    while (i--) {
+        base::Handle<FileMetadata> metadata(new FileMetadata);
+
+        auto level = static_cast<int>(rd.ReadVarint32());
+
+        metadata->number = rd.ReadVarint64();
+
+        metadata->smallest_key = InternalKey::CreateKey(rd.ReadString(),
+                                                        rd.ReadLargeString());
+        metadata->largest_key = InternalKey::CreateKey(rd.ReadString(),
+                                                       rd.ReadLargeString());
+
+        metadata->size = rd.ReadVarint64();
+        metadata->ctime = rd.ReadFixed64();
+
+        set_field(kCreation);
+        creation_.emplace_back(level, metadata);
+    }
+
     return base::Status::OK();
 }
 

@@ -11,6 +11,9 @@ static const char kTypeDeletion = 1;
 
 } // namespace
 
+WriteBatch::Handler::~Handler() {
+}
+
 WriteBatch::WriteBatch() {
 }
 

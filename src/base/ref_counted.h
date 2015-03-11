@@ -87,6 +87,13 @@ public:
         return *this;
     }
 
+    Handle<T> &operator = (T *naked) {
+        Handle<T>().Swap(this);
+        naked_ = naked;
+        if (naked_) naked_->AddRef();
+        return *this;
+    }
+
     Handle<T> &Swap(Handle<T> *other) {
         auto tmp = other->get();
         other->naked_ = get();
@@ -105,6 +112,11 @@ public:
 private:
     T *naked_ = nullptr;
 };
+
+template<class T>
+inline Handle<T> MakeHandle(T *naked) {
+    return Handle<T>(naked);
+}
 
 } // namespace base
 

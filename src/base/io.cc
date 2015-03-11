@@ -1,4 +1,5 @@
 #include "base/io.h"
+#include "port/io_impl.h"
 #include "base/varint_encoding.h"
 #include <stdio.h>
 
@@ -10,6 +11,25 @@ Writer::Writer() {
 }
 
 Writer::~Writer() {
+}
+
+Status Writer::WriteString(const Slice &str, size_t *written) {
+    size_t len = 0;
+    auto rs = WriteVarint32(static_cast<uint32_t>(str.size()), &len);
+    if (!rs.ok()) {
+        return rs;
+    }
+    if (written) {
+        *written += len;
+    }
+    rs = Write(str, &len);
+    if (!rs.ok()) {
+        return rs;
+    }
+    if (written) {
+        *written += len;
+    }
+    return rs;
 }
 
 Status Writer::WriteVarint32(uint32_t value, size_t *written) {
@@ -124,6 +144,52 @@ bool BufferedWriter::Advance(size_t add) {
 }
 
 AppendFile::~AppendFile() {
+}
+
+base::Status WriteAll(const std::string &file_name, const base::Slice &buf,
+                      size_t *written) {
+    AppendFile *file = nullptr;
+    auto rs = port::CreateAppendFile(file_name.c_str(), &file);
+    auto defer = base::Defer([file]() {
+        delete file;
+    });
+    if (!rs.ok()) {
+        return rs;
+    }
+
+    rs = file->Write(buf, written);
+    if (!rs.ok()) {
+        return rs;
+    }
+
+    return file->Sync();
+}
+
+base::Status ReadAll(const std::string &file_name, std::string *buf) {
+    FILE *file = ::fopen(file_name.c_str(), "r");
+    if (!file) {
+        return base::Status::IOError(file_name + " not found.");
+    }
+    auto defer = base::Defer([file]() {
+        fclose(file);
+    });
+
+    if (fseek(file, 0, SEEK_END) < 0) {
+        return base::Status::IOError("fseek() fail.");
+    }
+    auto file_size = ftell(file);
+    if (file_size < 0) {
+        return base::Status::IOError("ftell() fail.");
+    }
+    rewind(file);
+    buf->resize(file_size);
+
+    auto rv = fread(&buf->at(0), 1, file_size, file);
+    if (rv != file_size) {
+        return base::Status::IOError("fread() fail.");
+    }
+
+    return base::Status::OK();
 }
 
 } // namespace base

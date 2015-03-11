@@ -100,6 +100,19 @@ Tag InternalKey::tag() const {
                        static_cast<uint32_t>(key.size() - Tag::kTagSize));
 }
 
+/*static*/ InternalKey InternalKey::CreateKey(const base::Slice &key,
+                                              const base::Slice &value) {
+    auto size = key.size() + value.size();
+
+    base::BufferedWriter buf(size);
+    buf.Write(key.data(), key.size(), nullptr);
+    buf.Write(value.data(), key.size(), nullptr);
+
+    DCHECK_EQ(size, buf.len());
+    return InternalKey(buf.Drop(),
+                       static_cast<uint32_t>(key.size() - Tag::kTagSize));
+}
+
 InternalKey::InternalKey(char *packed_data, uint64_t size, uint32_t user_key_size)
     : Chunk(packed_data, size, user_key_size + Tag::kTagSize) {
 }

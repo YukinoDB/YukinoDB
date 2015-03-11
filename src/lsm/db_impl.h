@@ -4,10 +4,17 @@
 #include "lsm/memory_table.h"
 #include "yukino/db.h"
 #include "base/status.h"
+#include <mutex>
 
 namespace yukino {
 
+class Env;
+
 namespace lsm {
+
+class VersionSet;
+class TableCache;
+class InternalKeyComparator;
 
 class DBImpl : public DB {
 public:
@@ -29,13 +36,23 @@ public:
     virtual const Snapshot* GetSnapshot() override;
     virtual void ReleaseSnapshot(const Snapshot* snapshot) override;
 
+    base::Status NewDB(const Options &opt);
+
     constexpr static const auto kName = "lsm";
 
+    class WritingHandler;
 private:
+    Env *env_ = nullptr;
     std::string db_name_;
 
     base::Handle<MemoryTable> mutable_;
     base::Handle<MemoryTable> immtable_;
+
+    std::unique_ptr<VersionSet> versions_;
+    std::unique_ptr<TableCache> table_cache_;
+    std::unique_ptr<InternalKeyComparator> internal_comparator_;
+
+    std::mutex mutex_;
 };
 
 } // namespace lsm
