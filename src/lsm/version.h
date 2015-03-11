@@ -65,6 +65,11 @@ public:
         return next_file_number_;
     }
 
+    uint64_t redo_log_number() const {
+        DCHECK(has_field(kRedoLogNumber));
+        return redo_log_number_;
+    }
+
     void DeleteFile(int level, uint64_t file_number) {
         set_field(kDeletion);
         deletion_.emplace(level, file_number);
@@ -173,6 +178,10 @@ public:
 
     uint64_t last_version() const { return last_version_; }
 
+    uint64_t redo_log_number() const { return redo_log_number_; }
+
+    uint64_t prev_log_number() const { return prev_log_number_; }
+
     Version *current() const { return current_; }
 
     void Append(Version *version) {
@@ -192,6 +201,9 @@ public:
     friend class Version;
 private:
     uint64_t last_version_ = 0;
+
+    uint64_t redo_log_number_ = 0;
+    uint64_t prev_log_number_ = -1;
 
     const std::string db_name_;
     Env *env_;

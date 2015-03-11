@@ -2,6 +2,7 @@
 #define YUKI_BASE_BASE_H
 
 #include <utility>
+#include <string>
 
 namespace yukino {
 
@@ -35,6 +36,19 @@ const static size_t kKB = 1024;
 const static size_t kMB = 1024 * kKB;
 const static size_t kGB = 1024 * kMB;
 const static size_t kTB = 1024 * kGB;
+
+struct Strings {
+
+    __attribute__ (( __format__ (__printf__, 1, 2)))
+    static std::string Sprintf(const char *fmt, ...);
+
+    static std::string Vsprintf(const char *fmt, va_list ap);
+
+    static const size_t kInitialSize = 128;
+
+    Strings() = delete;
+    ~Strings() = delete;
+};
 
 // clz - count leading zero
 #define YK_CLZ64(n)  \

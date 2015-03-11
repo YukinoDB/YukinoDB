@@ -4,16 +4,24 @@
 #include "lsm/memory_table.h"
 #include "yukino/db.h"
 #include "base/status.h"
+#include "base/base.h"
 #include <mutex>
 
 namespace yukino {
 
 class Env;
 
+namespace base {
+
+class AppendFile;
+
+} // namespace base
+
 namespace lsm {
 
 class VersionSet;
 class TableCache;
+class LogWriter;
 class InternalKeyComparator;
 
 class DBImpl : public DB {
@@ -42,6 +50,10 @@ public:
 
     class WritingHandler;
 private:
+    std::string LogFileName(uint64_t number) {
+        return base::Strings::Sprintf("%llu.log", number);
+    }
+
     Env *env_ = nullptr;
     std::string db_name_;
 
@@ -51,6 +63,8 @@ private:
     std::unique_ptr<VersionSet> versions_;
     std::unique_ptr<TableCache> table_cache_;
     std::unique_ptr<InternalKeyComparator> internal_comparator_;
+    std::unique_ptr<LogWriter> log_;
+    std::unique_ptr<base::AppendFile> log_file_;
 
     std::mutex mutex_;
 };

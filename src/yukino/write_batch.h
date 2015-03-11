@@ -3,14 +3,9 @@
 
 #include "base/io.h"
 #include "base/status.h"
+#include "base/slice.h"
 
 namespace yukino  {
-
-namespace base {
-
-class Slice;
-
-} // namespace base
 
 class WriteBatch {
 public:
@@ -34,6 +29,10 @@ public:
         virtual void Delete(const base::Slice& key) = 0;
     };
     base::Status Iterate(Handler* handler) const;
+
+    base::Slice buf() const {
+        return base::Slice(redo_.buf(), redo_.len());
+    }
 
 private:
     base::BufferedWriter redo_;
