@@ -96,13 +96,13 @@ LogReader::LogReader(const void *buf, size_t len, bool checksum,
     , reader_(buf, len) {
 }
 
-bool LogReader::Read(base::Slice *slice) {
+bool LogReader::Read(base::Slice *slice, std::string* scratch) {
     if (reader_.active() == 0) {
         return false;
     }
     DCHECK_GT(reader_.active(), Log::kHeaderSize);
 
-    auto checksum_fail = 0;
+    auto fail = 0, segment = 0;
     Log::RecordType type = Log::kZeroType;
     do {
         auto left_over = block_size_ - block_offset_;
@@ -115,14 +115,27 @@ bool LogReader::Read(base::Slice *slice) {
             block_offset_ = 0;
         }
 
-        type = ReadPhysicalRecord(slice, &checksum_fail);
+        if (segment > 0) {
+            if (segment == 1) {
+                scratch->clear();
+            }
+            scratch->append(slice->data(), slice->size());
+        }
+
+        type = ReadPhysicalRecord(slice, &fail);
+        segment++;
     } while (type == Log::kMiddleType ||
              type == Log::kFirstType);
 
-    if (checksum_fail > 0) {
+    if (fail > 0) {
         status_ = base::Status::IOError("crc32 checksum fail.");
     } else {
         status_ = base::Status::OK();
+    }
+
+    if (segment > 1) {
+        scratch->append(slice->data(), slice->size());
+        *slice = *scratch;
     }
     return true;
 }
@@ -131,18 +144,22 @@ Log::RecordType LogReader::ReadPhysicalRecord(base::Slice *slice, int *fail) {
 
     auto checksum = reader_.ReadFixed32();
     auto len = reader_.ReadFixed16();
-    auto type = static_cast<Log::RecordType>(reader_.ReadByte());
+    auto type = reader_.ReadByte();
 
     *slice = reader_.Read(len);
 
     if (checksum_) {
-        auto stored = ::crc32(type, slice->data(), slice->size());
-        if (stored != checksum) {
+        base::CRC32 crc32;
+
+        crc32.Update(&type, 1);
+        crc32.Update(slice->data(), slice->size());
+
+        if (crc32.digest() != checksum) {
             (*fail)++;
         }
     }
     block_offset_ += (Log::kHeaderSize + len);
-    return type;
+    return static_cast<Log::RecordType>(type);
 }
 
 } // namespace lsm

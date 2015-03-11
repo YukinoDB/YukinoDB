@@ -73,11 +73,14 @@ class LogReader {
 public:
     LogReader(const void *buf, size_t len, bool checksum, size_t block_size);
 
-    bool Read(base::Slice *slice);
+    bool Read(base::Slice *slice, std::string* scratch);
 
     const base::Status &status() const { return status_; }
 
 private:
+    struct Buf {
+        
+    };
 
     Log::RecordType ReadPhysicalRecord(base::Slice *slice, int *fail);
 
