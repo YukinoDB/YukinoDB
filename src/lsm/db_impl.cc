@@ -53,23 +53,19 @@ private:
     MemoryTable *mutable_;
 };
 
-DBImpl::DBImpl() {
-}
-
-base::Status DBImpl::Open(const Options &opt, const std::string &name) {
-    env_ = DCHECK_NOTNULL(opt.env);
-    db_name_ = name;
-    internal_comparator_ = std::unique_ptr<InternalKeyComparator>(
-                                     new InternalKeyComparator(opt.comparator));
-
-    table_cache_ = std::unique_ptr<TableCache>(new TableCache(db_name_, opt));
-
-    versions_ = std::unique_ptr<VersionSet>(new VersionSet(db_name_, opt,
-                                                           table_cache_.get()));
+DBImpl::DBImpl(const Options &opt, const std::string &name)
+    : env_(DCHECK_NOTNULL(opt.env))
+    , db_name_(name)
+    , internal_comparator_(new InternalKeyComparator(opt.comparator))
+    , table_cache_(new TableCache(db_name_, opt))
+    , versions_(new VersionSet(db_name_, opt, table_cache_.get()))
+    , write_buffer_size_(opt.write_buffer_size) {
 
     mutable_ = new MemoryTable(*internal_comparator_);
+}
 
-    write_buffer_size_ = opt.write_buffer_size;
+base::Status DBImpl::Open(const Options &opt) {
+
     if (write_buffer_size_ <= 1 * base::kMB) {
         return base::Status::InvalidArgument("options.write_buffer_size too "
                                              "small, should be > 1 MB");
@@ -84,6 +80,11 @@ base::Status DBImpl::Open(const Options &opt, const std::string &name) {
             return base::Status::InvalidArgument("db miss and "
                                                  "create_if_missing is false.");
         }
+    }
+
+    if (opt.error_if_exists) {
+        return base::Status::InvalidArgument("db exists and "
+                                             "error_if_exists is true");
     }
 
     return base::Status::OK();

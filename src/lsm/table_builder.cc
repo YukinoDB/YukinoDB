@@ -124,12 +124,12 @@ public:
 
     base::Status Append(const Chunk &chunk) {
         block_close_ = false;
-        splite_key_ = chunk.key_slice();
+        splite_key_.assign(chunk.key(), chunk.key_size());
         return builder_.Append(chunk);
     }
 
     BlockBuilder builder_;
-    base::Slice splite_key_;
+    std::string splite_key_;
 
     bool block_close_ = false;
     uint64_t active_blocks_;

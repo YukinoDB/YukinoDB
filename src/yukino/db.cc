@@ -9,9 +9,9 @@ namespace yukino {
 /*static*/ base::Status DB::Open(const Options& options, const std::string& name,
                            DB** dbptr) {
     if (::strcmp(options.engine_name, lsm::DBImpl::kName) == 0) {
-        std::unique_ptr<lsm::DBImpl> db(new lsm::DBImpl());
+        std::unique_ptr<lsm::DBImpl> db(new lsm::DBImpl(options, name));
 
-        auto rs = db->Open(options, name);
+        auto rs = db->Open(options);
         if (!rs.ok()) {
             return rs;
         }

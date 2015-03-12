@@ -118,7 +118,8 @@ base::Status BlockBuilder::Append(const Chunk &chunk) {
         restart_count_++;
     }
     last_shared_size_ = shared_size;
-    last_key_ = chunk.key_slice();
+    last_key_.assign(chunk.key(), chunk.key_size());
+    //last_key_ = chunk.key_slice();
 
     if (unlimited_) {
         while (block_size_ < add_size + active_size_) {
@@ -166,7 +167,7 @@ void BlockBuilder::Reset() {
     active_size_ = kBlockFixedSize;
     restart_count_ = 0;
     last_shared_size_ = 0;
-    last_key_ = base::Slice();
+    last_key_ = "";
     unlimited_ = false;
 
     index_.clear();
@@ -202,7 +203,8 @@ uint32_t BlockBuilder::CalcSharedSize(const base::Slice &key,
     size_t size = std::min(key.size(), last_key_.size());
     uint32_t i = 0;
     for (i = 0; i < size; ++i) {
-        if (key.data()[i] != last_key_.data()[i]) {
+        //if (key.data()[i] != last_key_.data()[i]) {
+        if (key.data()[i] != last_key_[i]) {
             break;
         }
     }

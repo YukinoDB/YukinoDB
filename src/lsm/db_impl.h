@@ -27,11 +27,11 @@ class InternalKeyComparator;
 
 class DBImpl : public DB {
 public:
-    DBImpl();
-
-    base::Status Open(const Options &opt, const std::string &name);
-
+    DBImpl(const Options &opt, const std::string &name);
     virtual ~DBImpl() override;
+
+    base::Status Open(const Options &opt);
+
     virtual base::Status Put(const WriteOptions& options,
                              const base::Slice& key,
                              const base::Slice& value) override;

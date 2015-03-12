@@ -22,7 +22,6 @@ base::Status Compactor::Compact(Iterator **children, size_t n,
                                 TableBuilder *builder) {
     std::unique_ptr<Iterator> merger(CreateMergingIterator(&comparator_,
                                                            children, n));
-    std::list<Chunk> stored;
 
     for (merger->SeekToFirst(); merger->Valid(); merger->Next()) {
         DCHECK_GE(merger->key().size(), Tag::kTagSize);
@@ -35,9 +34,7 @@ base::Status Compactor::Compact(Iterator **children, size_t n,
         }
 
         auto chunk = Chunk::CreateKeyValue(merger->key(), merger->value());
-        stored.push_back(std::move(chunk));
-
-        auto rs = DCHECK_NOTNULL(builder)->Append(stored.back());
+        auto rs = DCHECK_NOTNULL(builder)->Append(chunk);
         if (!rs.ok()) {
             return rs;
         }

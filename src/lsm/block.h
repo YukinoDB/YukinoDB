@@ -59,7 +59,7 @@ private:
     int restart_count_;
 
     uint32_t last_shared_size_;
-    base::Slice last_key_;
+    std::string last_key_;
 
     std::vector<uint32_t> index_;
 

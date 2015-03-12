@@ -28,6 +28,9 @@ Chunk::Chunk(Chunk &&other)
 }
 
 Chunk::~Chunk() {
+//    if (packed_data_.get()) {
+//        DLOG(INFO) << "delete: " << static_cast<void*>(packed_data_.get());
+//    }
 }
 
 void Chunk::operator = (Chunk &&other) {
@@ -40,6 +43,7 @@ void Chunk::operator = (Chunk &&other) {
     char *dup = new char[key.size()];
 
     ::memcpy(DCHECK_NOTNULL(dup), key.data(), key.size());
+    //DLOG(INFO) << "create: " << static_cast<void*>(dup);
     return std::move(Chunk(dup, static_cast<uint32_t>(key.size())));
 }
 

@@ -39,6 +39,8 @@ public:
 
     base::Status GetFileMetadata(uint64_t file_number, FileMetadata *rv);
 
+    Env *env() const { return env_; }
+
 private:
     Env *env_;
     std::string db_name_;
