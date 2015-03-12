@@ -2,6 +2,7 @@
 #define YUKINO_LSM_FORMAT_H_
 
 #include "yukino/comparator.h"
+#include "base/base.h"
 #include "glog/logging.h"
 #include <stdint.h>
 
@@ -38,7 +39,10 @@ struct Tag {
 
 class InternalKeyComparator : public Comparator {
 public:
-    InternalKeyComparator(const Comparator *delegated);
+    explicit InternalKeyComparator(const Comparator *delegated);
+    InternalKeyComparator() : delegated_(nullptr) {}
+    InternalKeyComparator(const InternalKeyComparator &other)
+        : delegated_(other.delegated_) {}
 
     virtual ~InternalKeyComparator() override;
 
@@ -56,6 +60,24 @@ public:
 private:
     const Comparator *delegated_;
 };
+
+inline std::string LogFileName(const std::string &db_name, uint64_t number) {
+    return base::Strings::Sprintf("%s/%llu.log", db_name.c_str(), number);
+}
+
+inline std::string TableFileName(const std::string &db_name, uint64_t number) {
+    return base::Strings::Sprintf("%s/%llu.sst", db_name.c_str(), number);
+}
+
+// MANIFEST
+inline std::string ManifestFileName(const std::string &db_name, uint64_t number) {
+    return base::Strings::Sprintf("%s/MANIFEST-%llu", db_name.c_str(), number);
+}
+
+// CURRENT
+inline std::string CurrentFileName(const std::string &db_name) {
+    return base::Strings::Sprintf("%s/CURRENT", db_name.c_str());
+}
 
 } // namespace lsm
 

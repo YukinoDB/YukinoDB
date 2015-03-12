@@ -2,6 +2,7 @@
 #define YUKINO_LSM_TABLE_CACHE_H_
 
 #include "lsm/format.h"
+#include "base/status.h"
 #include "base/ref_counted.h"
 #include "base/base.h"
 #include <stdint.h>
@@ -25,6 +26,7 @@ class MappedMemory;
 namespace lsm {
 
 class Table;
+struct FileMetadata;
 
 class TableCache {
 public:
@@ -34,6 +36,8 @@ public:
                              uint64_t file_size);
 
     void Invalid(uint64_t file_number) { cached_.erase(file_number); }
+
+    base::Status GetFileMetadata(uint64_t file_number, FileMetadata *rv);
 
 private:
     Env *env_;

@@ -1,5 +1,7 @@
 #include "lsm/table_cache.h"
 #include "lsm/table.h"
+#include "lsm/version.h"
+#include "lsm/chunk.h"
 #include "yukino/options.h"
 #include "yukino/env.h"
 
@@ -42,6 +44,34 @@ Iterator *TableCache::CreateIterator(const ReadOptions &options,
     return iter;
 }
 
+base::Status TableCache::GetFileMetadata(uint64_t file_number, FileMetadata *rv) {
+    auto file_name = TableFileName(db_name_, file_number);
+
+    if (!env_->FileExists(file_name)) {
+        return base::Status::IOError(base::Strings::Sprintf("SST file %s not exist.",
+                                                            file_name.c_str()));
+    }
+
+    auto rs = env_->GetFileSize(file_name, &rv->size);
+    if (!rs.ok()) {
+        return rs;
+    }
+
+    std::unique_ptr<Iterator> iter(CreateIterator(ReadOptions(), file_number,
+                                                  rv->size));
+    if (!iter->status().ok()) {
+        return iter->status();
+    }
+    iter->SeekToFirst();
+    DCHECK(iter->Valid());
+    rv->smallest_key = InternalKey::CreateKey(iter->key());
+
+    iter->SeekToLast();
+    DCHECK(iter->Valid());
+    rv->largest_key = InternalKey::CreateKey(iter->key());
+
+    return base::Status::OK();
+}
 
 TableCache::CacheEntry::~CacheEntry() {
     if (table)

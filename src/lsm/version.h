@@ -19,10 +19,18 @@ class Env;
 class Options;
 class ReadOptions;
 
+namespace base {
+
+class AppendFile;
+
+} // namespace base
+
 namespace lsm {
 
 class VersionSet;
 class TableCache;
+class LogWriter;
+class VersionBuilder;
 
 struct FileMetadata : public base::ReferenceCounted<FileMetadata> {
 
@@ -31,8 +39,10 @@ struct FileMetadata : public base::ReferenceCounted<FileMetadata> {
     InternalKey smallest_key;
     InternalKey largest_key;
 
-    uint64_t size;
-    uint64_t ctime;
+    uint64_t size = 0;
+    uint64_t ctime = 0;
+
+    FileMetadata(uint64_t file_number) : number(file_number) {}
 };
 
 class VersionPatch : public base::DisableCopyAssign {
@@ -49,6 +59,9 @@ public:
         kMaxFields,
     };
 
+    typedef std::vector<std::pair<int, base::Handle<FileMetadata>>> CreationTy;
+    typedef std::set<std::pair<int, uint64_t>> DeletionTy;
+
     static const auto kNum32Bits = (kMaxFields + 31) / 32;
 
     explicit VersionPatch(const std::string &comparator)
@@ -60,9 +73,20 @@ public:
         DCHECK(has_field(kLastVersion));
         return last_version_;
     }
+
+    void set_last_version(uint64_t version) {
+        set_field(kLastVersion);
+        last_version_ = version;
+    }
+
     uint64_t next_file_number() const {
         DCHECK(has_field(kNextFileNumber));
         return next_file_number_;
+    }
+
+    void set_next_file_number(uint64_t number) {
+        set_field(kNextFileNumber);
+        next_file_number_ = number;
     }
 
     uint64_t redo_log_number() const {
@@ -70,24 +94,60 @@ public:
         return redo_log_number_;
     }
 
+    void set_redo_log_number(uint64_t number) {
+        set_field(kRedoLogNumber);
+        redo_log_number_ = number;
+    }
+
+    uint64_t prev_log_number() const {
+        DCHECK(has_field(kPrevLogNumber));
+        return prev_log_number_;
+    }
+
+    void set_prev_log_number(uint64_t number) {
+        set_field(kPrevLogNumber);
+        prev_log_number_ = number;
+    }
+
+    const DeletionTy &deletion() const {
+        //DCHECK(has_field(kDeletion));
+        return deletion_;
+    }
+
+    const CreationTy &creation() const {
+        //DCHECK(has_field(kCreation));
+        return creation_;
+    }
+
     void DeleteFile(int level, uint64_t file_number) {
         set_field(kDeletion);
         deletion_.emplace(level, file_number);
     }
 
+    void CreateFile(int level, FileMetadata *metadata) {
+        set_field(kCreation);
+        creation_.emplace_back(level, base::Handle<FileMetadata>(metadata));
+    }
+
+    void CreateFile(int level, uint64_t file_number,
+                    const base::Slice &smallest_key,
+                    const base::Slice &largest_key,
+                    size_t size, uint64_t ctime);
+
     bool has_field(Field field) const {
         auto i = static_cast<int>(field);
         DCHECK_GE(i, 0); DCHECK_LT(i, kMaxFields);
-        return bits_[i / 32] & (1 >> (i % 32));
+        return bits_[i / 32] & (1 << (i % 32));
     }
 
     base::Status Decode(const base::Slice &buf);
+    base::Status Encode(std::string *buf) const;
 
 private:
     void set_field(Field field) {
         auto i = static_cast<int>(field);
         DCHECK_GE(i, 0); DCHECK_LT(i, kMaxFields);
-        bits_[i / 32] |= (1 >> (i % 32));
+        bits_[i / 32] |= (1 << (i % 32));
     }
 
     std::string comparator_;
@@ -100,10 +160,10 @@ private:
     InternalKey compaction_key_;
 
     // Which files will be delete.
-    std::set<std::pair<int, uint64_t>> deletion_;
+    DeletionTy deletion_;
 
     // Which files will be create.
-    std::vector<std::pair<int, base::Handle<FileMetadata>>> creation_;
+    CreationTy creation_;
 
     uint32_t bits_[kNum32Bits];
 };
@@ -157,6 +217,7 @@ public:
                                });
     }
 
+    friend class VersionBuilder;
 private:
     VersionSet *owned_;
     Version *next_ = this;
@@ -167,6 +228,8 @@ private:
 
 class VersionSet : public base::DisableCopyAssign {
 public:
+    typedef VersionBuilder Builder;
+
     VersionSet(const std::string &db_name, const Options &options,
                TableCache *table_cache);
     ~VersionSet();
@@ -175,14 +238,6 @@ public:
         last_version_ += add;
         return last_version_;
     }
-
-    uint64_t last_version() const { return last_version_; }
-
-    uint64_t redo_log_number() const { return redo_log_number_; }
-
-    uint64_t prev_log_number() const { return prev_log_number_; }
-
-    Version *current() const { return current_; }
 
     void Append(Version *version) {
         version->AddRef();
@@ -198,12 +253,39 @@ public:
         return current()->SizeLevelFiles(level);
     }
 
+    uint64_t GenerateFileNumber() {
+        return next_file_number_ ++;
+    }
+
+    bool NeedsCompaction() const {
+        // TODO:
+        return false;
+    }
+
+    base::Status Apply(VersionPatch *patch, std::mutex *mutex);
+
+    base::Status CreateManifestFile();
+
+    base::Status WriteSnapshot();
+
+    base::Status WritePatch(const VersionPatch &patch);
+
+    uint64_t last_version() const { return last_version_; }
+
+    uint64_t redo_log_number() const { return redo_log_number_; }
+
+    uint64_t prev_log_number() const { return prev_log_number_; }
+
+    Version *current() const { return current_; }
+
     friend class Version;
+    friend class VersionBuilder;
 private:
     uint64_t last_version_ = 0;
-
+    uint64_t next_file_number_ = 0;
     uint64_t redo_log_number_ = 0;
-    uint64_t prev_log_number_ = -1;
+    uint64_t prev_log_number_ = 0;
+    uint64_t manifest_file_number_ = 0;
 
     const std::string db_name_;
     Env *env_;
@@ -213,6 +295,46 @@ private:
     Version *current_;
 
     TableCache *table_cache_;
+
+    std::unique_ptr<base::AppendFile> log_file_;
+    std::unique_ptr<LogWriter> log_;
+};
+
+class VersionBuilder : public base::DisableCopyAssign {
+public:
+    VersionBuilder(VersionSet *versions, Version *current);
+    ~VersionBuilder();
+
+    void Apply(const VersionPatch &patch);
+
+    Version *Build();
+
+private:
+    struct BySmallestKey {
+
+        InternalKeyComparator comparator;
+
+        bool operator ()(const base::Handle<FileMetadata> &a,
+                         const base::Handle<FileMetadata> &b) const {
+            auto rv = comparator.Compare(a->smallest_key.key_slice(),
+                                         b->smallest_key.key_slice());
+            if (rv != 0) {
+                return rv < 0;
+            } else {
+                return a->number < b->number;
+            }
+        }
+    };
+
+    struct FileEntry {
+        std::set<uint64_t> deletion;
+        std::set<base::Handle<FileMetadata>, BySmallestKey> creation;
+    };
+    
+    FileEntry levels_[kMaxLevel];
+    
+    VersionSet *owns_;
+    base::Handle<Version> current_;
 };
 
 } // namespace lsm

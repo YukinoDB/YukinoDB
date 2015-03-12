@@ -69,6 +69,12 @@ base::Status DBImpl::Open(const Options &opt, const std::string &name) {
 
     mutable_ = new MemoryTable(*internal_comparator_);
 
+    write_buffer_size_ = opt.write_buffer_size;
+    if (write_buffer_size_ <= 1 * base::kMB) {
+        return base::Status::InvalidArgument("options.write_buffer_size too "
+                                             "small, should be > 1 MB");
+    }
+
     auto current_file_name = db_name_ + "/" + kCurrentFileName;
     if (!env_->FileExists(current_file_name)) {
 
@@ -84,7 +90,14 @@ base::Status DBImpl::Open(const Options &opt, const std::string &name) {
 }
 
 DBImpl::~DBImpl() {
+    {
+        std::unique_lock<std::mutex> lock(mutex_);
 
+        shutting_down_.store(this, std::memory_order_release);
+        while (background_active_) {
+            background_cv_.wait(lock);
+        }
+    }
 }
 
 base::Status DBImpl::Put(const WriteOptions& options, const base::Slice& key,
@@ -105,10 +118,15 @@ base::Status DBImpl::Write(const WriteOptions& options,
                            WriteBatch* updates) {
     uint64_t last_version = 0;
     {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::unique_lock<std::mutex> lock(mutex_);
         last_version = versions_->last_version();
 
-        auto rs = log_->Append(updates->buf());
+        auto rs = MakeRoomForWrite(false, &lock);
+        if (!rs.ok()) {
+            return rs;
+        }
+
+        rs = log_->Append(updates->buf());
         if (!rs.ok()) {
             return rs;
         }
@@ -154,9 +172,10 @@ base::Status DBImpl::NewDB(const Options &opt) {
         return rs;
     }
 
+    log_file_number_ = versions_->GenerateFileNumber();
+
     base::AppendFile *file = nullptr;
-    rs = env_->CreateAppendFile(LogFileName(versions_->redo_log_number()),
-                                     &file);
+    rs = env_->CreateAppendFile(LogFileName(db_name_, log_file_number_), &file);
     if (!rs.ok()) {
         return rs;
     }
@@ -176,6 +195,97 @@ base::Status DBImpl::NewDB(const Options &opt) {
     }
 
     return base::Status::OK();
+}
+
+// REQUIRES: mutex_ is held
+// REQUIRES: this thread is the current logger
+// That's means, the function must be lock.
+base::Status DBImpl::MakeRoomForWrite(bool force,
+                                      std::unique_lock<std::mutex> *lock) {
+    bool allow_delay = !force;
+    base::Status rs;
+
+    while (true) {
+
+        if (!background_error_.ok()) {
+            rs = background_error_;
+            break;
+        } else if (allow_delay &&
+                   versions_->NumberLevelFiles(0) >= kMaxNumberLevel0File) {
+            mutex_.unlock();
+
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+            allow_delay = false;
+
+            mutex_.lock();
+        } else if (!force &&
+                   mutable_->memory_usage_size() <= write_buffer_size_) {
+            break;
+        } else if (immtable_.get()) {
+            background_cv_.wait(*lock);
+        } else if (versions_->NumberLevelFiles(0) >= kMaxNumberLevel0File) {
+            LOG(INFO) << "Level-0 files: " << versions_->NumberLevelFiles(0)
+                << " wait...";
+            background_cv_.wait(*lock);
+        } else {
+            DCHECK_EQ(0, versions_->prev_log_number());
+
+            auto new_log_number = versions_->GenerateFileNumber();
+            base::AppendFile *file = nullptr;
+            rs = env_->CreateAppendFile(LogFileName(db_name_, new_log_number),
+                                        &file);
+            if (!rs.ok()) {
+                break;
+            }
+
+            log_file_number_ = new_log_number;
+            log_file_ = std::unique_ptr<base::AppendFile>(file);
+            log_ = std::unique_ptr<LogWriter>(new Log::Writer(file,
+                                                       Log::kDefaultBlockSize));
+            immtable_ = mutable_;
+            mutable_ = new MemoryTable(*internal_comparator_);
+            force = false;
+            MaybeScheduleCompaction();
+        }
+    }
+    
+    return rs;
+}
+
+void DBImpl::MaybeScheduleCompaction() {
+    if (background_active_) {
+        return; // Compaction is running.
+    }
+
+    if (shutting_down_.load(std::memory_order_acquire)) {
+        return; // Is shutting down, ignore schedule
+    }
+
+    if (immtable_.get() == nullptr && !versions_->NeedsCompaction()) {
+        return; // Compaction is no need
+    }
+
+    background_active_ = true;
+    std::thread([this]() {
+        this->BackgroundWork();
+    }).detach();
+}
+
+void DBImpl::BackgroundWork() {
+    std::unique_lock<std::mutex> lock(mutex_);
+
+    DCHECK(background_active_);
+    if (!shutting_down_.load(std::memory_order_acquire)) {
+        BackgroundCompaction();
+    }
+    background_active_ = false;
+
+    MaybeScheduleCompaction();
+    background_cv_.notify_all();
+}
+
+void DBImpl::BackgroundCompaction() {
+    // TODO:
 }
 
 } // namespace lsm

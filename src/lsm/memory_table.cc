@@ -25,6 +25,9 @@ void MemoryTable::Put(const base::Slice &key, const base::Slice &value,
                       uint64_t version,
                       uint8_t flag) {
     auto internal_key = InternalKey::CreateKey(key, value, version, flag);
+
+    memory_usage_size_.fetch_add(internal_key.size(),
+                                 std::memory_order_release);
     table_.Put(std::move(internal_key));
 }
 

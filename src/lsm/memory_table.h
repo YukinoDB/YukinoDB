@@ -6,6 +6,7 @@
 #include "base/ref_counted.h"
 #include "base/status.h"
 #include "base/base.h"
+#include <atomic>
 
 namespace yukino {
 
@@ -46,11 +47,16 @@ public:
         const InternalKeyComparator comparator_;
     };
 
+    size_t memory_usage_size() const {
+        return memory_usage_size_.load(std::memory_order_acquire);
+    }
+
     typedef SkipList<InternalKey, KeyComparator> Table;
 
 private:
     const InternalKeyComparator comparator_;
     Table table_;
+    std::atomic<size_t> memory_usage_size_;
 }; // class MemoryTable
 
 } // namespace lsm

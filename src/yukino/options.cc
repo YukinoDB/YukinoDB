@@ -9,7 +9,8 @@ Options::Options()
     , comparator(BytewiseCompartor())
     , create_if_missing(false)
     , error_if_exists(false)
-    , env(Env::Default()) {
+    , env(Env::Default())
+    , write_buffer_size(4 * base::kMB) {
 }
 
 } // namespace yukino

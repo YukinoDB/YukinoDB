@@ -1,6 +1,8 @@
 #ifndef YUKINO_API_OPTION_H_
 #define YUKINO_API_OPTION_H_
 
+#include <stddef.h>
+
 namespace yukino {
 
 class Env;
@@ -34,9 +36,29 @@ struct Options {
     // e.g. to read/write files, schedule background work, etc.
     // Default: Env::Default()
     Env* env;
+
+    // -------------------
+    // Parameters that affect performance
+
+    // Amount of data to build up in memory (backed by an unsorted log
+    // on disk) before converting to a sorted on-disk file.
+    //
+    // Larger values increase performance, especially during bulk loads.
+    // Up to two write buffers may be held in memory at the same time,
+    // so you may wish to adjust this parameter to control memory usage.
+    // Also, a larger write buffer will result in a longer recovery time
+    // the next time the database is opened.
+    //
+    // Default: 4MB
+    size_t write_buffer_size;
     
     // Create an Options object with default values for all fields.
     Options();
+};
+
+struct ReadOptions {
+
+    ReadOptions() {}
 };
 
 
