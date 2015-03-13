@@ -33,6 +33,8 @@ public:
     base::Status Get(const base::Slice &key, uint64_t version,
                      std::string *value);
 
+    base::Status Get(const InternalKey &key, std::string *value);
+
     Iterator *NewIterator();
 
     struct KeyComparator {

@@ -77,27 +77,21 @@ base::Status Version::Get(const ReadOptions &options, const InternalKey &key,
         return base::Status::NotFound("");
     }
 
-    Iterator *merger = nullptr;
     std::vector<Iterator*> iters;
-    auto defer = base::Defer([&iters, merger] () {
-        std::for_each(iters.begin(), iters.end(), [merger](Iterator *iter) {
-            if (iter != merger) {
-                delete iter;
-            }
-        });
-        delete merger;
-    });
     for (const auto &metadata : maybe_file) {
         auto iter = owned_->table_cache_->CreateIterator(options,
                                                          metadata->number,
                                                          metadata->size);
         if (!iter->status().ok()) {
+            delete iter;
             return iter->status();
         }
+        iters.push_back(iter);
     }
 
-    merger = CreateMergingIterator(&owned_->comparator_, &iters[0],
-                                   iters.size());
+    std::unique_ptr<Iterator> merger(CreateMergingIterator(&owned_->comparator_,
+                                                           &iters[0],
+                                                           iters.size()));
     merger->Seek(key.key());
     if (!merger->Valid()) {
         return base::Status::NotFound("");
@@ -242,6 +236,12 @@ base::Status VersionPatch::Decode(const base::Slice &buf) {
     return base::Status::OK();
 }
 
+void VersionPatch::Reset() {
+    ::memset(bits_, 0, kNum32Bits * sizeof(uint32_t));
+    creation_.clear();
+    deletion_.clear();
+}
+
 base::Status VersionSet::Apply(VersionPatch *patch, std::mutex *mutex) {
 
     if (patch->has_field(VersionPatch::kRedoLogNumber)) {
@@ -359,7 +359,6 @@ VersionBuilder::VersionBuilder(VersionSet *versions, Version *current)
 }
 
 VersionBuilder::~VersionBuilder() {
-
 }
 
 void VersionBuilder::Apply(const VersionPatch &patch) {
@@ -389,10 +388,12 @@ Version *VersionBuilder::Build() {
                 version->mutable_file(i)->push_back(metadata);
             }
         }
+        levels_[i].deletion.clear();
 
         for (const auto &metadata : levels_[i].creation) {
             version->mutable_file(i)->push_back(metadata);
         }
+        levels_[i].creation.clear();
     }
 
     return version.release();

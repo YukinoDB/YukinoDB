@@ -33,28 +33,34 @@ void MemoryTable::Put(const base::Slice &key, const base::Slice &value,
 
 base::Status MemoryTable::Get(const base::Slice &key, uint64_t version,
                  std::string *value) {
-    Table::Iterator iter(&table_);
-
     auto lookup_key = InternalKey::CreateKey(key, version);
-    iter.Seek(lookup_key);
-    if (!iter.Valid()) {
+    return Get(lookup_key, value);
+}
+
+base::Status MemoryTable::Get(const InternalKey &key, std::string *value) {
+
+    Table::Iterator iter(&table_);
+    iter.Seek(key);
+    if (!iter.Valid() ||
+        comparator_.delegated()->Compare(key.user_key_slice(),
+                                         iter.key().user_key_slice()) != 0) {
         return base::Status::NotFound("MemoryTable::Get()");
     }
 
     auto tag = iter.key().tag();
     switch (tag.flag) {
-    case kFlagValue:
-        value->assign(iter.key().value_slice().ToString());
-        break;
+        case kFlagValue:
+            value->assign(iter.key().value_slice().ToString());
+            break;
 
-    case kFlagDeletion:
-        return base::Status::NotFound("InternalKey deletion");
+        case kFlagDeletion:
+            return base::Status::NotFound("InternalKey deletion");
 
-    default:
-        DLOG(FATAL) << "noreached";
-        break;
+        default:
+            DLOG(FATAL) << "noreached";
+            break;
     }
-
+    
     return base::Status::OK();
 }
 

@@ -2,10 +2,15 @@
 #include "lsm/builtin.h"
 #include "lsm/format.h"
 #include "lsm/table_cache.h"
+#include "lsm/table_builder.h"
 #include "lsm/version.h"
 #include "lsm/log.h"
+#include "lsm/compaction.h"
+#include "yukino/iterator.h"
 #include "yukino/write_batch.h"
 #include "yukino/options.h"
+#include "yukino/read_options.h"
+#include "yukino/write_options.h"
 #include "yukino/env.h"
 #include "glog/logging.h"
 
@@ -24,6 +29,7 @@ public:
     }
 
     virtual void Put(const base::Slice& key, const base::Slice& value) override {
+        //DLOG(INFO) << "key: " << key.ToString() << " version: " << version();
         mutable_->Put(key, value, version(), kFlagValue);
         ++counting_version_;
 
@@ -71,8 +77,7 @@ base::Status DBImpl::Open(const Options &opt) {
                                              "small, should be > 1 MB");
     }
 
-    auto current_file_name = db_name_ + "/" + kCurrentFileName;
-    if (!env_->FileExists(current_file_name)) {
+    if (!env_->FileExists(CurrentFileName(db_name_))) {
 
         if (opt.create_if_missing) {
             return NewDB(opt);
@@ -87,10 +92,11 @@ base::Status DBImpl::Open(const Options &opt) {
                                              "error_if_exists is true");
     }
 
-    return base::Status::OK();
+    return Recovery();
 }
 
 DBImpl::~DBImpl() {
+    DLOG(INFO) << "Shutting down, last_version: " << versions_->last_version();
     {
         std::unique_lock<std::mutex> lock(mutex_);
 
@@ -149,8 +155,37 @@ base::Status DBImpl::Write(const WriteOptions& options,
 
 base::Status DBImpl::Get(const ReadOptions& options,
                          const base::Slice& key, std::string* value) {
-    // TODO:
-    return base::Status::OK();
+    uint64_t last_version = 0;
+
+    std::unique_lock<std::mutex> lock(mutex_);
+    if (options.snapshot) {
+        // TODO:
+    } else {
+        last_version = versions_->last_version();
+    }
+
+    base::Handle<MemoryTable> mut(mutable_);
+    base::Handle<MemoryTable> imm(immtable_);
+
+    base::Status rs;
+    mutex_.unlock();
+
+    InternalKey internal_key = InternalKey::CreateKey(key, last_version);
+    rs = mut->Get(internal_key, value);
+    if (rs.IsNotFound()) {
+        if (imm.get()) {
+            rs = imm->Get(internal_key, value);
+        }
+    }
+
+    mutex_.lock();
+
+    if (rs.ok() || !rs.IsNotFound()) {
+        return rs;
+    }
+
+    base::Handle<Version> current(versions_->current());
+    return current->Get(options, internal_key, value);
 }
 
 Iterator* DBImpl::NewIterator(const ReadOptions& options) {
@@ -185,17 +220,115 @@ base::Status DBImpl::NewDB(const Options &opt) {
     log_ = std::unique_ptr<LogWriter>(new Log::Writer(file,
                                                       Log::kDefaultBlockSize));
 
-    // check log file ok:
-    rs = log_->Append("YukinoDB");
-    if (!rs.ok()) {
-        return rs;
-    }
-    rs = log_file_->Sync();
+    VersionPatch patch(internal_comparator_->delegated()->Name());
+    patch.set_prev_log_number(0);
+    patch.set_redo_log_number(log_file_number_);
+
+    return versions_->Apply(&patch, &mutex_);
+}
+
+base::Status DBImpl::Recovery() {
+
+    std::string buf;
+    auto rs = base::ReadAll(CurrentFileName(db_name_), &buf);
     if (!rs.ok()) {
         return rs;
     }
 
+    if (buf.back() != '\n') {
+        return base::Status::Corruption("CURRENT file is not with newline.");
+    }
+    buf[buf.size() - 1] = '\0';
+
+    auto manifest_file_number = atoll(buf.c_str());
+    std::vector<uint64_t> logs;
+    rs = ReplayVersions(manifest_file_number, &logs);
+    if (!rs.ok()) {
+        return rs;
+    }
+
+    DCHECK_GE(logs.size(), 2);
+    rs = Redo(versions_->redo_log_number(), logs[logs.size() - 2]);
+    if (!rs.ok()) {
+        return rs;
+    }
+    DLOG(INFO) << "Replay ok, last version: " << versions_->last_version();
+
+    log_file_number_ = versions_->redo_log_number();
+    base::AppendFile *file = nullptr;
+    rs = env_->CreateAppendFile(LogFileName(db_name_, log_file_number_), &file);
+    if (!rs.ok()) {
+        return rs;
+    }
+
+    log_file_ = std::unique_ptr<base::AppendFile>(file);
+    log_ = std::unique_ptr<LogWriter>(new Log::Writer(file,
+                                                      Log::kDefaultBlockSize));
     return base::Status::OK();
+}
+
+base::Status DBImpl::ReplayVersions(uint64_t file_number,
+                                    std::vector<uint64_t> *logs) {
+    base::MappedMemory *rv = nullptr;
+    auto rs = env_->CreateRandomAccessFile(ManifestFileName(db_name_,
+                                                            file_number), &rv);
+    if (!rs.ok()) {
+        return rs;
+    }
+    std::unique_ptr<base::MappedMemory> file(rv);
+    Log::Reader reader(file->buf(), file->size(), true, Log::kDefaultBlockSize);
+
+    VersionPatch patch("");
+    VersionSet::Builder builder(versions_.get(), versions_->current());
+    base::Slice record;
+    std::string buf;
+    while (reader.Read(&record, &buf)) {
+        if (!reader.status().ok()) {
+            break;
+        }
+        patch.Reset();
+        patch.Decode(record);
+        if (patch.has_field(VersionPatch::kComparator)) {
+            if (patch.comparator() != internal_comparator_->delegated()->Name()) {
+                return base::Status::Corruption("difference comparators");
+            }
+        }
+        logs->push_back(patch.last_version());
+
+        DLOG(INFO) << "Replay apply: " << patch.last_version();
+        builder.Apply(patch);
+        versions_->Append(builder.Build());
+    }
+    return reader.status();
+}
+
+base::Status DBImpl::Redo(uint64_t file_number, uint64_t last_version) {
+    base::MappedMemory *rv = nullptr;
+    auto rs = env_->CreateRandomAccessFile(LogFileName(db_name_, file_number),
+                                           &rv);
+    if (!rs.ok()) {
+        return rs;
+    }
+
+    std::unique_ptr<base::MappedMemory> file(rv);
+    Log::Reader reader(file->buf(), file->size(), true, Log::kDefaultBlockSize);
+    base::Slice record;
+    std::string buf;
+
+    WritingHandler handler(last_version + 1, mutable_.get());
+    while (reader.Read(&record, &buf)) {
+        if (!reader.status().ok()) {
+            break;
+        }
+
+        rs = WriteBatch::Iterate(record.data(), record.size(), &handler);
+        if (!rs.ok()) {
+            return rs;
+        }
+    }
+
+    versions_->AdvanceVersion(handler.counting_version());
+    return reader.status();
 }
 
 // REQUIRES: mutex_ is held
@@ -286,7 +419,97 @@ void DBImpl::BackgroundWork() {
 }
 
 void DBImpl::BackgroundCompaction() {
-    // TODO:
+
+    // Need compact memory table first.
+    if (immtable_.get() != nullptr) {
+        CompactMemoryTable();
+        return;
+    }
+
+
+}
+
+base::Status DBImpl::CompactMemoryTable() {
+    DCHECK_NOTNULL(immtable_.get());
+
+    VersionPatch patch(internal_comparator_->delegated()->Name());
+    {
+        base::Handle<Version> current(versions_->current());
+        auto rs = WriteLevel0Table(current.get(), &patch, immtable_.get());
+        if (!rs.ok()) {
+            return rs;
+        }
+    }
+
+    if (shutting_down_.load(std::memory_order_acquire)) {
+        return base::Status::IOError("Deleting DB during memtable compaction");
+    }
+
+    patch.set_prev_log_number(0);
+    patch.set_redo_log_number(log_file_number_);
+    auto rs = versions_->Apply(&patch, &mutex_);
+    if (!rs.ok()) {
+        return rs;
+    }
+
+    // compact finish, should release the immtable_
+    immtable_ = nullptr;
+
+    // TODO: DeleteObsoleteFiles
+    return base::Status::OK();
+}
+
+base::Status DBImpl::WriteLevel0Table(const Version *current,
+                                      VersionPatch *patch,
+                                      MemoryTable *table) {
+
+    base::Handle<FileMetadata> metadata(new FileMetadata(versions_->GenerateFileNumber()));
+    std::unique_ptr<Iterator> iter(table->NewIterator());
+    if (!iter->status().ok()) {
+        return iter->status();
+    }
+    LOG(INFO) << "Level0 table compaction start, target file number: "
+              << metadata->number;
+
+    {
+        mutex_.unlock();
+        auto rs = BuildTable(iter.release(), metadata.get());
+        mutex_.lock();
+
+        if (!rs.ok()) {
+            return rs;
+        }
+    }
+
+    patch->CreateFile(0, metadata.get());
+    return base::Status::OK();
+}
+
+base::Status DBImpl::BuildTable(Iterator *iter, FileMetadata *metadata) {
+    base::AppendFile *rv = nullptr;
+    std::string file_name(TableFileName(db_name_, metadata->number));
+    auto rs = env_->CreateAppendFile(file_name, &rv);
+    if (!rs.ok()) {
+        return rs;
+    }
+
+    std::unique_ptr<base::AppendFile> file(rv);
+    TableBuilder builder(TableOptions(), file.get());
+    for (iter->SeekToFirst(); iter->Valid(); iter->Next()) {
+        rs = builder.Append(Chunk::CreateKeyValue(iter->key(), iter->value()));
+        if (!rs.ok()) {
+            break;
+        }
+    }
+    if (rs.ok()) {
+        rs = builder.Finalize();
+    }
+
+    file->Close();
+    if (!rs.ok()) {
+        env_->DeleteFile(file_name, false);
+    }
+    return table_cache_->GetFileMetadata(metadata->number, metadata);
 }
 
 } // namespace lsm

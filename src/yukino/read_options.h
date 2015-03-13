@@ -3,8 +3,12 @@
 
 namespace yukino  {
 
+class Snapshot;
+
 struct ReadOptions {
     // TODO:
+
+    Snapshot *snapshot;
 
     ReadOptions();
 };

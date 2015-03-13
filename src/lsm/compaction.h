@@ -2,6 +2,7 @@
 #define YUKINO_LSM_COMPACTION_H_
 
 #include "lsm/format.h"
+#include "lsm/chunk.h"
 #include "base/status.h"
 #include "base/base.h"
 #include <string>

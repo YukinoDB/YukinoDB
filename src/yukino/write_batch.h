@@ -28,7 +28,12 @@ public:
         virtual void Put(const base::Slice& key, const base::Slice& value) = 0;
         virtual void Delete(const base::Slice& key) = 0;
     };
-    base::Status Iterate(Handler* handler) const;
+
+    base::Status Iterate(Handler* handler) const {
+        return Iterate(redo_.buf(), redo_.len(), handler);
+    }
+
+    static base::Status Iterate(const void *buf, size_t len, Handler *handler);
 
     base::Slice buf() const {
         return base::Slice(redo_.buf(), redo_.len());

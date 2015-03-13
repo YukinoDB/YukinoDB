@@ -14,7 +14,7 @@ class AppendFileImpl : public base::AppendFile {
 public:
     static base::Status CreateFile(const char *file_name,
                                    AppendFileImpl **writer) {
-        FILE *file = fopen(file_name, "w");
+        FILE *file = fopen(file_name, "a");
         if (!file) {
             return base::Status::IOError(strerror(errno));
         }

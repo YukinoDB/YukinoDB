@@ -2,7 +2,8 @@
 
 namespace yukino {
 
-ReadOptions::ReadOptions() {
+ReadOptions::ReadOptions()
+    : snapshot(nullptr) {
     // TODO:
 }
 

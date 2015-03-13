@@ -56,11 +56,6 @@ struct Options {
     Options();
 };
 
-struct ReadOptions {
-
-    ReadOptions() {}
-};
-
 
 } // namespace yukino
 

@@ -82,6 +82,12 @@ public:
     virtual void ReleaseSnapshot(const Snapshot* snapshot) = 0;
 };
 
+class Snapshot : public base::DisableCopyAssign {
+public:
+    Snapshot() {}
+    virtual ~Snapshot();
+};
+
 } //namespace yukino
 
 #endif // YUKINO_API_DB_H_

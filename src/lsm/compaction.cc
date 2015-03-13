@@ -7,6 +7,7 @@
 #include "lsm/chunk.h"
 #include "yukino/env.h"
 #include "yukino/options.h"
+#include "yukino/read_options.h"
 #include "yukino/iterator.h"
 #include "glog/logging.h"
 
@@ -73,6 +74,7 @@ base::Status Compaction::Compact(TableBuilder *builder) {
             return rs;
         }
     }
+
     origin_iters_.clear();
     return builder->Finalize();
 }

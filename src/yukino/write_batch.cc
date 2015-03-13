@@ -49,13 +49,14 @@ void WriteBatch::Clear() {
     redo_.Clear();
 }
 
-base::Status WriteBatch::Iterate(WriteBatch::Handler* handler) const {
-    if (redo_.len() == 0) {
+/*static*/ base::Status WriteBatch::Iterate(const void *buf, size_t len,
+                                            WriteBatch::Handler *handler) {
+    if (len == 0) {
         return base::Status::OK();
     }
 
-    base::BufferedReader reader(redo_.buf(), redo_.len());
-    while (redo_.active() > 0) {
+    base::BufferedReader reader(buf, len);
+    while (reader.active() > 0) {
         auto type = reader.Read();
         size_t size = reader.ReadVarint32();
         auto key  = reader.Read(size);
@@ -75,7 +76,7 @@ base::Status WriteBatch::Iterate(WriteBatch::Handler* handler) const {
                 break;
         }
     }
-
+    
     return base::Status::OK();
 }
 

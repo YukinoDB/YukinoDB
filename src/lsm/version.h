@@ -66,7 +66,12 @@ public:
 
     explicit VersionPatch(const std::string &comparator)
         : comparator_(comparator) {
-        ::memset(bits_, 0, kNum32Bits * sizeof(uint32_t));
+        Reset();
+    }
+
+    const std::string &comparator() const {
+        DCHECK(has_field(kComparator));
+        return comparator_;
     }
 
     uint64_t last_version() const {
@@ -142,6 +147,8 @@ public:
 
     base::Status Decode(const base::Slice &buf);
     base::Status Encode(std::string *buf) const;
+
+    void Reset();
 
 private:
     void set_field(Field field) {

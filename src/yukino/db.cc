@@ -26,4 +26,7 @@ namespace yukino {
 /*virtual*/ DB::~DB() {
 }
 
+/*virtual*/ Snapshot::~Snapshot() {
+}
+
 } // namespace yukino

@@ -3,6 +3,7 @@
 #include "lsm/version.h"
 #include "lsm/chunk.h"
 #include "yukino/options.h"
+#include "yukino/read_options.h"
 #include "yukino/env.h"
 
 namespace yukino {
