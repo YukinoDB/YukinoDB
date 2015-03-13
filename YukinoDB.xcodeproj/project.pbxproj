@@ -50,8 +50,7 @@
 		23CD83FB1A89DEBC00D64229 /* table.cc in Sources */ = {isa = PBXBuildFile; fileRef = 23CD83FA1A89DEBC00D64229 /* table.cc */; };
 		23CD83FD1A8A09DF00D64229 /* comparator.cc in Sources */ = {isa = PBXBuildFile; fileRef = 23CD83FC1A8A09DF00D64229 /* comparator.cc */; };
 		23EEF9A71AA5854C0003C37C /* merger_test.cc in Sources */ = {isa = PBXBuildFile; fileRef = 23EEF9A61AA5854C0003C37C /* merger_test.cc */; };
-		23EEF9B31AA5F5BB0003C37C /* compactor.cc in Sources */ = {isa = PBXBuildFile; fileRef = 23EEF9B21AA5F5BB0003C37C /* compactor.cc */; };
-		23EEF9B71AA5FC4E0003C37C /* compactor_test.cc in Sources */ = {isa = PBXBuildFile; fileRef = 23EEF9B61AA5FC4E0003C37C /* compactor_test.cc */; };
+		23EEF9B71AA5FC4E0003C37C /* compaction_test.cc in Sources */ = {isa = PBXBuildFile; fileRef = 23EEF9B61AA5FC4E0003C37C /* compaction_test.cc */; };
 		23FE66DB1A1F2284005C7568 /* libglog.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 23FE66B91A1F2051005C7568 /* libglog.a */; };
 /* End PBXBuildFile section */
 
@@ -222,9 +221,7 @@
 		23CD83FA1A89DEBC00D64229 /* table.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = table.cc; sourceTree = "<group>"; };
 		23CD83FC1A8A09DF00D64229 /* comparator.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = comparator.cc; sourceTree = "<group>"; };
 		23EEF9A61AA5854C0003C37C /* merger_test.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = merger_test.cc; path = src/lsm/merger_test.cc; sourceTree = SOURCE_ROOT; };
-		23EEF9B11AA5F5470003C37C /* compactor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = compactor.h; sourceTree = "<group>"; };
-		23EEF9B21AA5F5BB0003C37C /* compactor.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = compactor.cc; sourceTree = "<group>"; };
-		23EEF9B61AA5FC4E0003C37C /* compactor_test.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = compactor_test.cc; path = src/lsm/compactor_test.cc; sourceTree = SOURCE_ROOT; };
+		23EEF9B61AA5FC4E0003C37C /* compaction_test.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = compaction_test.cc; path = src/lsm/compaction_test.cc; sourceTree = SOURCE_ROOT; };
 		23FE66B31A1F2051005C7568 /* glog.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = glog.xcodeproj; path = third_party/glog/xcode/glog.xcodeproj; sourceTree = "<group>"; };
 		23FE66BC1A1F206B005C7568 /* gtest.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = gtest.xcodeproj; path = third_party/gtest/xcode/gtest.xcodeproj; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -310,8 +307,6 @@
 				23681CB71A9F5E70002721BE /* memory_table.cc */,
 				23681CBD1AA34D1E002721BE /* merger.h */,
 				23681CC71AA34D9D002721BE /* merger.cc */,
-				23EEF9B11AA5F5470003C37C /* compactor.h */,
-				23EEF9B21AA5F5BB0003C37C /* compactor.cc */,
 				237F99461AB1D31C0063BF2C /* compaction.h */,
 				237F99501AB1D36B0063BF2C /* compaction.cc */,
 				237ECB061AA9DB7C00EF7FB1 /* db_impl.cc */,
@@ -378,7 +373,7 @@
 				23681CB01A9F04E7002721BE /* skiplist_test.cc */,
 				23681CB91A9F6575002721BE /* memory_table_test.cc */,
 				23EEF9A61AA5854C0003C37C /* merger_test.cc */,
-				23EEF9B61AA5FC4E0003C37C /* compactor_test.cc */,
+				23EEF9B61AA5FC4E0003C37C /* compaction_test.cc */,
 				2304D8E31AA8335B004C8251 /* env_impl_test.cc */,
 				2373CF951AA94FED0073B668 /* ref_counted_test.cc */,
 				237F99331AB06E710063BF2C /* log_test.cc */,
@@ -539,7 +534,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				237F99321AB03ACA0063BF2C /* log.cc in Sources */,
-				23EEF9B31AA5F5BB0003C37C /* compactor.cc in Sources */,
 				237ECB1A1AAC986A00EF7FB1 /* table_cache.cc in Sources */,
 				2380F6271A106F3B00B1EA97 /* base_test.cc in Sources */,
 				237F99381AB085CC0063BF2C /* base.cc in Sources */,
@@ -567,7 +561,7 @@
 				23CD83E41A845C6F00D64229 /* varint_encoding.cc in Sources */,
 				23CD83E61A845F9400D64229 /* varint_encoding_test.cc in Sources */,
 				23CD83F51A89B3D200D64229 /* table_builder_test.cc in Sources */,
-				23EEF9B71AA5FC4E0003C37C /* compactor_test.cc in Sources */,
+				23EEF9B71AA5FC4E0003C37C /* compaction_test.cc in Sources */,
 				23681CB61A9F5B0F002721BE /* format.cc in Sources */,
 				23CD83FB1A89DEBC00D64229 /* table.cc in Sources */,
 				2373CF961AA94FED0073B668 /* ref_counted_test.cc in Sources */,

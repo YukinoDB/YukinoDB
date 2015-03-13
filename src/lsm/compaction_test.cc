@@ -1,14 +1,16 @@
 // The YukinoDB Unit Test Suite
 //
-//  compactor_test.cc
+//  compaction_test.cc
 //
 //  Created by Niko Bellic.
 //
 //
-#include "lsm/compactor.h"
+#include "lsm/compaction.h"
 #include "lsm/table_builder.h"
+#include "lsm/table_cache.h"
 #include "lsm/table.h"
 #include "lsm/chunk.h"
+#include "yukino/options.h"
 #include "yukino/comparator.h"
 #include "base/mem_io.h"
 #include "base/io.h"
@@ -20,18 +22,22 @@ namespace yukino {
 
 namespace lsm {
 
-class CompactorTest : public ::testing::Test {
+class CompactionTest : public ::testing::Test {
 public:
-    CompactorTest ()
-        : internal_comparator_(BytewiseCompartor()) {
+    CompactionTest ()
+        : internal_comparator_(BytewiseCompartor())
+        , cache_(kDBName, Options()) {
         options_.block_size = 64;
         options_.restart_interval = 3;
     }
 
     virtual void SetUp() override {
+        compaction_ = new Compaction(kDBName, internal_comparator_, &cache_);
     }
 
     virtual void TearDown() override {
+        delete compaction_;
+        compaction_ = nullptr;
     }
 
     std::string Build(std::initializer_list<Chunk> init) {
@@ -46,24 +52,26 @@ public:
         return std::move(*writer.mutable_buf());
     }
 
-    std::string Compact(std::vector<Iterator*> children,
-                        uint64_t oldest) {
-        Compactor compactor(internal_comparator_, oldest);
+    std::string Compact() {
         base::StringWriter writer;
         TableBuilder builder(options_, &writer);
 
-        if (compactor.Compact(&children[0], children.size(), &builder).ok()) {
+        if (compaction_->Compact(&builder).ok()) {
             return writer.buf();
         } else {
             return "";
         }
     }
 
+    constexpr static const auto kDBName = "demo";
+
     InternalKeyComparator internal_comparator_;
     TableOptions options_;
+    Compaction *compaction_;
+    TableCache cache_;
 };
 
-TEST_F(CompactorTest, Sanity) {
+TEST_F(CompactionTest, Sanity) {
     static const char *values[] = { "1", "2", "3", "4", "5", "6"};
 
     auto t1 = Build({
@@ -87,10 +95,9 @@ TEST_F(CompactorTest, Sanity) {
     ASSERT_TRUE(tt1.Init().ok());
     ASSERT_TRUE(tt2.Init().ok());
 
-    auto tn = Compact({
-        new Table::Iterator(&tt1),
-        new Table::Iterator(&tt2),
-    }, 0);
+    compaction_->AddOriginIterator(new Table::Iterator(&tt1));
+    compaction_->AddOriginIterator(new Table::Iterator(&tt2));
+    auto tn = Compact();
 
     auto mm = base::MappedMemory::Attach(&tn);
     Table tt(&internal_comparator_, &mm);
@@ -106,7 +113,7 @@ TEST_F(CompactorTest, Sanity) {
     }
 }
 
-TEST_F(CompactorTest, Deletion) {
+TEST_F(CompactionTest, Deletion) {
     static const char *values[] = { "1", "2", "3", "4", "5", "6"};
 
     auto t1 = Build({
@@ -130,10 +137,9 @@ TEST_F(CompactorTest, Deletion) {
     ASSERT_TRUE(tt1.Init().ok());
     ASSERT_TRUE(tt2.Init().ok());
 
-    auto tn = Compact({
-        new Table::Iterator(&tt1),
-        new Table::Iterator(&tt2),
-    }, 0);
+    compaction_->AddOriginIterator(new Table::Iterator(&tt1));
+    compaction_->AddOriginIterator(new Table::Iterator(&tt2));
+    auto tn = Compact();
 
     auto mm = base::MappedMemory::Attach(&tn);
     Table tt(&internal_comparator_, &mm);

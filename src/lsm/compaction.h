@@ -35,6 +35,15 @@ public:
 
     void AddOriginIterator(Iterator *iter) { origin_iters_.push_back(iter); }
 
+    /**
+     * Compact starts >= compaction_point
+     * Compact version < oldest_version
+     *
+     * REQUIRES: AddOriginIterator or AddOriginFile
+     * REQUIRES: set_target
+     * OPTIONAL: set_compaction_point
+     * OPTIONAL: set_oldest_version
+     */
     base::Status Compact(TableBuilder *builder);
 
     void set_target(uint64_t number) { target_file_number_ = number; }
@@ -47,6 +56,12 @@ public:
         return origin_file_numbers_;
     }
 
+    // REQUIRES: Compact
+    uint64_t origin_size() const { return origin_size_; }
+
+    // REQUIRES: Compact
+    uint64_t target_size() const { return target_size_; }
+
 private:
     std::string db_name_;
     TableCache *cache_;
@@ -57,6 +72,9 @@ private:
 
     uint64_t oldest_version_ = 0;
     base::Slice compaction_point_;
+
+    uint64_t origin_size_ = 0;
+    uint64_t target_size_ = 0;
 
     InternalKeyComparator comparator_;
 };

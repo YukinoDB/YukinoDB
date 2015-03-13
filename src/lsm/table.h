@@ -65,7 +65,7 @@ class TableIterator : public Iterator {
 public:
     explicit TableIterator(const Table *table);
 
-    virtual ~TableIterator();
+    virtual ~TableIterator() override;
 
     virtual bool Valid() const override;
     virtual void SeekToFirst() override;

@@ -3,6 +3,7 @@
 #include "lsm/table_builder.h"
 #include "lsm/merger.h"
 #include "lsm/format.h"
+#include "lsm/builtin.h"
 #include "lsm/chunk.h"
 #include "yukino/env.h"
 #include "yukino/options.h"
@@ -22,10 +23,6 @@ Compaction::Compaction(const std::string &db_name,
 }
 
 Compaction::~Compaction() {
-    std::for_each(origin_iters_.begin(), origin_iters_.end(),
-    [](Iterator *iter){
-        delete iter;
-    });
 }
 
 base::Status Compaction::AddOriginFile(uint64_t number, uint64_t size) {
@@ -38,14 +35,13 @@ base::Status Compaction::AddOriginFile(uint64_t number, uint64_t size) {
 }
 
 base::Status Compaction::Compact(TableBuilder *builder) {
+    DCHECK_NOTNULL(builder);
+
     std::unique_ptr<Iterator> merger(CreateMergingIterator(&comparator_,
                                                            &origin_iters_[0],
                                                            origin_iters_.size()));
     if (!merger->status().ok()) {
         return merger->status();
-    }
-    if (origin_iters_.size() == 1) {
-        origin_iters_.clear();
     }
 
     if (compaction_point_.empty()) {
@@ -54,11 +50,31 @@ base::Status Compaction::Compact(TableBuilder *builder) {
         merger->Seek(compaction_point_);
     }
 
+    origin_size_ = 0;
+    target_size_ = 0;
     for (; merger->Valid(); merger->Next()) {
-        // TODO:
-    }
+        DCHECK_GE(merger->key().size(), Tag::kTagSize);
 
-    return base::Status::OK();
+        origin_size_ += (merger->key().size() + merger->value().size());
+
+        auto p = merger->key().data() + merger->key().size() - Tag::kTagSize;
+        auto tag = Tag::Decode(*reinterpret_cast<const Tag::EncodedType*>(p));
+
+        if (tag.version < oldest_version_ || tag.flag == kFlagDeletion) {
+            continue;
+        }
+
+        auto chunk = Chunk::CreateKeyValue(merger->key(), merger->value());
+        target_size_ += chunk.size();
+
+        auto rs = builder->Append(chunk);
+        if (!rs.ok()) {
+            origin_iters_.clear();
+            return rs;
+        }
+    }
+    origin_iters_.clear();
+    return builder->Finalize();
 }
 
 } // namespace lsm

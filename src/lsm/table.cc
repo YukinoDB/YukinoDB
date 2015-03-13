@@ -100,7 +100,6 @@ TableIterator::TableIterator(const Table *table)
 }
 
 TableIterator::~TableIterator() {
-
 }
 
 bool TableIterator::Valid() const{
