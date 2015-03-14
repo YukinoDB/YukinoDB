@@ -18,6 +18,7 @@ class WriteOptions;
 namespace base {
 
 class AppendFile;
+class FileLock;
 
 } // namespace base
 
@@ -30,6 +31,88 @@ struct FileMetadata;
 class TableCache;
 class LogWriter;
 class InternalKeyComparator;
+class SnapshotList;
+class SnapshotImpl;
+
+class SnapshotImpl : public Snapshot {
+public:
+    SnapshotImpl(uint64_t version, SnapshotList *owns)
+        : version_(version)
+        , owns_(owns) {
+    }
+
+    virtual ~SnapshotImpl() override;
+
+    void InsertTail(SnapshotImpl *x) {
+        x->prev_ = prev_;
+        x->prev_->next_ = x;
+        x->next_ = this;
+        prev_ = x;
+    }
+
+    void InsertHead(SnapshotImpl *x) {
+        x->next_ = next_;
+        x->next_->prev_ = x;
+        x->prev_ = this;
+        next_ = x;
+    }
+
+    void Remove(SnapshotList *owns) const {
+        DCHECK_EQ(owns_, owns);
+        prev_->next_ = next_;
+        next_->prev_ = prev_;
+    }
+
+    template<class T>
+    static const SnapshotImpl *DownCast(const T *x) {
+        if (!x) {
+            return nullptr;
+        }
+        DCHECK(dynamic_cast<const SnapshotImpl*>(x));
+        return static_cast<const SnapshotImpl*>(x);
+    }
+
+    uint64_t version() const { return version_; }
+
+    SnapshotImpl *next() const { return next_; }
+    SnapshotImpl *prev() const { return prev_; }
+
+private:
+    uint64_t version_;
+
+    SnapshotList *owns_ = nullptr;
+    SnapshotImpl *prev_ = this;
+    SnapshotImpl *next_ = this;
+};
+
+class SnapshotList : public base::DisableCopyAssign {
+public:
+    SnapshotList() : dummy_(0, this) {}
+
+    ~SnapshotList() {
+        auto iter = dummy_.next();
+        auto p = iter;
+        while (iter != &dummy_) {
+            iter = iter->next();
+            delete p;
+            p = iter;
+        }
+    }
+
+    SnapshotImpl *CreateSnapshot(uint64_t version) {
+        auto rv = new SnapshotImpl(version, this);
+        dummy_.InsertTail(rv);
+        return rv;
+    }
+
+    void DeleteSnapshot(const SnapshotImpl *x) {
+        x->Remove(this);
+        delete x;
+    }
+
+private:
+    SnapshotImpl dummy_;
+};
 
 class DBImpl : public DB {
 public:
@@ -86,6 +169,8 @@ private:
     bool background_active_ = false;
     std::atomic<DBImpl*> shutting_down_;
 
+    SnapshotList snapshots_;
+    std::unique_ptr<base::FileLock> db_lock_;
     std::unique_ptr<TableCache> table_cache_;
     std::unique_ptr<VersionSet> versions_;
     std::unique_ptr<InternalKeyComparator> internal_comparator_;

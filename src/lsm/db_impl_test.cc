@@ -27,7 +27,10 @@ public:
     }
 
     virtual void TearDown() override {
+        Env::Default()->DeleteFile(kName, true);
     }
+
+    
 
     constexpr static const auto kName = "demo";
 };
@@ -41,10 +44,6 @@ TEST_F(DBImplTest, Sanity) {
     auto rs = db.Open(options);
     ASSERT_TRUE(rs.ok()) << rs.ToString();
 
-    auto defer = base::Defer([&options](){
-        options.env->DeleteFile(kName, true);
-    });
-
     rs = db.Put(WriteOptions(), "aaa", "1");
     ASSERT_TRUE(rs.ok()) << rs.ToString();
 
@@ -57,39 +56,80 @@ TEST_F(DBImplTest, Sanity) {
     ASSERT_EQ("2", buf);
 }
 
+TEST_F(DBImplTest, UniqueDBLock) {
+    Options options;
+
+    options.create_if_missing = true;
+
+    DBImpl db(options, kName);
+    auto rs = db.Open(options);
+    ASSERT_TRUE(rs.ok()) << rs.ToString();
+
+    DBImpl db_miss(options, kName);
+    rs = db_miss.Open(options);
+    ASSERT_FALSE(rs.ok());
+}
+
+TEST_F(DBImplTest, Snapshot) {
+    Options options;
+
+    options.create_if_missing = true;
+
+    DBImpl db(options, kName);
+    auto rs = db.Open(options);
+    ASSERT_TRUE(rs.ok()) << rs.ToString();
+
+    db.Put(WriteOptions(), "aaa", "1");
+    auto s1 = db.GetSnapshot();
+    db.Put(WriteOptions(), "aaa", "2");
+    auto s2 = db.GetSnapshot();
+    db.Put(WriteOptions(), "aaa", "3");
+
+    std::string value;
+    ReadOptions read_options;
+
+    read_options.snapshot = s1;
+    db.Get(read_options, "aaa", &value);
+    EXPECT_EQ("1", value);
+
+    read_options.snapshot = s2;
+    db.Get(read_options, "aaa", &value);
+    EXPECT_EQ("2", value);
+
+    read_options.snapshot = nullptr;
+    db.Get(read_options, "aaa", &value);
+    EXPECT_EQ("3", value);
+}
+
 TEST_F(DBImplTest, Recovery) {
     Options options;
 
     options.create_if_missing = true;
 
-    auto db = new DBImpl(options, kName);
-    auto rs = db->Open(options);
-    ASSERT_TRUE(rs.ok()) << rs.ToString();
+    {
+        DBImpl db(options, kName);
+        auto rs = db.Open(options);
+        ASSERT_TRUE(rs.ok()) << rs.ToString();
 
-    auto defer = base::Defer([&options](){
-        options.env->DeleteFile(kName, true);
-    });
+        WriteBatch batch;
+        batch.Put("aaa", "1");
+        batch.Put("bbb", "2");
+        batch.Put("ccc", "3");
 
-    WriteBatch batch;
-    batch.Put("aaa", "1");
-    batch.Put("bbb", "2");
-    batch.Put("ccc", "3");
+        rs = db.Write(WriteOptions(), &batch);
+        ASSERT_TRUE(rs.ok()) << rs.ToString();
+    }
 
-    rs = db->Write(WriteOptions(), &batch);
-    ASSERT_TRUE(rs.ok()) << rs.ToString();
+    {
+        DBImpl db(options, kName);
+        auto rs = db.Open(options);
+        ASSERT_TRUE(rs.ok()) << rs.ToString();
 
-    delete db;
-
-    db = new DBImpl(options, kName);
-    rs = db->Open(options);
-    ASSERT_TRUE(rs.ok()) << rs.ToString();
-
-    std::string value;
-    rs = db->Get(ReadOptions(), "bbb", &value);
-    ASSERT_TRUE(rs.ok()) << rs.ToString();
-    EXPECT_EQ("2", value);
-
-    delete db;
+        std::string value;
+        rs = db.Get(ReadOptions(), "bbb", &value);
+        ASSERT_TRUE(rs.ok()) << rs.ToString();
+        EXPECT_EQ("2", value);
+    }
 }
 
 TEST_F(DBImplTest, Level0Dump) {
@@ -123,6 +163,50 @@ TEST_F(DBImplTest, Level0Dump) {
     rs = db.Get(ReadOptions(), "bbb", &found);
     ASSERT_TRUE(rs.ok()) << rs.ToString();
     EXPECT_EQ(value, found);
+
+    rs = db.Get(ReadOptions(), "ccc", &found);
+    ASSERT_TRUE(rs.ok()) << rs.ToString();
+    EXPECT_EQ("3", found);
+}
+
+TEST_F(DBImplTest, DumpThenRecovery) {
+    Options options;
+
+    options.create_if_missing = true;
+    options.write_buffer_size = 128;
+
+    std::string value(64, '2');
+    {
+        std::unique_ptr<DBImpl> db(new DBImpl(options, kName));
+        auto rs = db->Open(options);
+        ASSERT_TRUE(rs.ok()) << rs.ToString();
+
+        WriteBatch batch;
+        batch.Put("aaa", value);
+        batch.Put("bbb", value);
+
+        rs = db->Write(WriteOptions(), &batch);
+        ASSERT_TRUE(rs.ok()) << rs.ToString();
+
+        rs = db->Put(WriteOptions(), "ccc", "3");
+        ASSERT_TRUE(rs.ok()) << rs.ToString();
+        db->TEST_WaitForBackground();
+    }
+
+    {
+        std::unique_ptr<DBImpl> db(new DBImpl(options, kName));
+        auto rs = db->Open(options);
+        ASSERT_TRUE(rs.ok()) << rs.ToString();
+
+        std::string found;
+        rs = db->Get(ReadOptions(), "bbb", &found);
+        ASSERT_TRUE(rs.ok()) << rs.ToString();
+        EXPECT_EQ(value, found);
+
+        rs = db->Get(ReadOptions(), "ccc", &found);
+        ASSERT_TRUE(rs.ok()) << rs.ToString();
+        EXPECT_EQ("3", found);
+    }
 }
 
 } // namespace lsm

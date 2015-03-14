@@ -1,6 +1,7 @@
 #ifndef YUKINO_LSM_MEMORY_TABLE_H_
 #define YUKINO_LSM_MEMORY_TABLE_H_
 
+#include "lsm/chunk.h"
 #include "lsm/format.h"
 #include "lsm/skiplist.h"
 #include "base/ref_counted.h"
@@ -21,7 +22,6 @@ class Slice;
 namespace lsm {
 
 class Chunk;
-class InternalKey;
 
 class MemoryTable : public base::ReferenceCounted<MemoryTable> {
 public:

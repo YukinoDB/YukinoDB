@@ -28,6 +28,8 @@ public:
                                      uint64_t* file_size) override;
     virtual base::Status RenameFile(const std::string& src,
                                     const std::string& target) override;
+    virtual base::Status LockFile(const std::string& fname,
+                                  base::FileLock** lock) override;
 
 private:
     base::Status Error() { return base::Status::IOError(strerror(errno)); }

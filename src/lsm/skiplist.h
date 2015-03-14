@@ -31,6 +31,14 @@ public:
         rand_ = std::bind(distribution, engine);
     }
 
+    ~SkipList() {
+        auto p = head_;
+        for (auto i = head_->next(0); i != nullptr; i = i->next(0)) {
+            DeleteNode(p);
+            p = i;
+        }
+    }
+
     void Put(Key &&key) {
         // TODO(opt): We can use a barrier-free variant of FindGreaterOrEqual()
         // here since Insert() is externally synchronized.
@@ -83,6 +91,11 @@ private:
         auto chunk = new char[sizeof(Node) +
                               sizeof(std::atomic<Node *>) * (height - 1)];
         return new (chunk) Node(std::move(key));
+    }
+
+    void DeleteNode(Node *node) {
+        node->~Node();
+        delete[] reinterpret_cast<char*>(node);
     }
 
     Node *FindGreaterOrEqual(const Key& key, Node** prev) const {

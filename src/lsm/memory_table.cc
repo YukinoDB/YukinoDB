@@ -18,7 +18,8 @@ int MemoryTable::KeyComparator::operator()(const InternalKey &a,
 
 MemoryTable::MemoryTable(InternalKeyComparator comparator)
     : comparator_(comparator)
-    , table_(KeyComparator(comparator)) {
+    , table_(KeyComparator(comparator))
+    , memory_usage_size_(0) {
 }
 
 void MemoryTable::Put(const base::Slice &key, const base::Slice &value,

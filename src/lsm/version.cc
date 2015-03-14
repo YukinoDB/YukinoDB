@@ -242,6 +242,64 @@ void VersionPatch::Reset() {
     deletion_.clear();
 }
 
+bool VersionSet::NeedsCompaction() const {
+    if (current()->NumberLevelFiles(0) > kMaxNumberLevel0File) {
+        return true;
+    }
+
+    if (current()->SizeLevelFiles(0) > kMaxSizeLevel0File) {
+        return true;
+    }
+
+    // TODO:
+    return false;
+}
+
+base::Status VersionSet::Recovery(uint64_t file_number,
+                                  std::vector<uint64_t> *logs) {
+    base::MappedMemory *rv = nullptr;
+    auto rs = env_->CreateRandomAccessFile(ManifestFileName(db_name_,
+                                                            file_number), &rv);
+    if (!rs.ok()) {
+        return rs;
+    }
+    std::unique_ptr<base::MappedMemory> file(rv);
+    Log::Reader reader(file->buf(), file->size(), true, Log::kDefaultBlockSize);
+
+    VersionPatch patch("");
+    VersionSet::Builder builder(this, current());
+    base::Slice record;
+    std::string buf;
+    while (reader.Read(&record, &buf) && reader.status().ok()) {
+        patch.Reset();
+        patch.Decode(record);
+        if (patch.has_field(VersionPatch::kComparator)) {
+            if (patch.comparator() != comparator_.delegated()->Name()) {
+                return base::Status::Corruption("difference comparators");
+            }
+        }
+        logs->push_back(patch.last_version());
+
+        builder.Apply(patch);
+
+        if (patch.has_field(VersionPatch::kRedoLogNumber)) {
+            redo_log_number_ = patch.redo_log_number();
+        }
+        if (patch.has_field(VersionPatch::kPrevLogNumber)) {
+            prev_log_number_ = patch.prev_log_number();
+        }
+        if (patch.has_field(VersionPatch::kNextFileNumber)) {
+            next_file_number_ = patch.next_file_number();
+        }
+        if (patch.has_field(VersionPatch::kLastVersion)) {
+            last_version_ = patch.last_version();
+        }
+    }
+
+    Append(builder.Build());
+    return reader.status();
+}
+
 base::Status VersionSet::Apply(VersionPatch *patch, std::mutex *mutex) {
 
     if (patch->has_field(VersionPatch::kRedoLogNumber)) {

@@ -13,6 +13,7 @@ namespace base {
 class Writer;
 class AppendFile;
 class MappedMemory;
+class FileLock;
 
 } // namespace base
 
@@ -70,6 +71,23 @@ public:
     // Rename file src to target.
     virtual base::Status RenameFile(const std::string& src,
                                     const std::string& target) = 0;
+
+    // Lock the specified file.  Used to prevent concurrent access to
+    // the same db by multiple processes.  On failure, stores NULL in
+    // *lock and returns non-OK.
+    //
+    // On success, stores a pointer to the object that represents the
+    // acquired lock in *lock and returns OK.  The caller should call
+    // UnlockFile(*lock) to release the lock.  If the process exits,
+    // the lock will be automatically released.
+    //
+    // If somebody else already holds the lock, finishes immediately
+    // with a failure.  I.e., this call does not wait for existing locks
+    // to go away.
+    //
+    // May create the named file if it does not already exist.
+    virtual base::Status LockFile(const std::string& fname,
+                                  base::FileLock** lock) = 0;
 
 }; // class Env
 

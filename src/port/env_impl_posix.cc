@@ -154,5 +154,10 @@ base::Status EnvImpl::RenameFile(const std::string& src,
     }
 }
 
+base::Status EnvImpl::LockFile(const std::string& fname,
+                               base::FileLock** lock) {
+    return port::CreateFileLock(fname.c_str(), true, lock);
+}
+
 } // namespace port
 } // namespace yukino

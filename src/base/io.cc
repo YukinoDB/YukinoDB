@@ -146,6 +146,9 @@ bool BufferedWriter::Advance(size_t add) {
 AppendFile::~AppendFile() {
 }
 
+FileLock::~FileLock() {
+}
+
 base::Status WriteAll(const std::string &file_name, const base::Slice &buf,
                       size_t *written) {
     AppendFile *file = nullptr;

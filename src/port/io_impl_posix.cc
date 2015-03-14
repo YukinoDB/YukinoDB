@@ -181,6 +181,72 @@ private:
 
     int fd_ = -1;
 };
+
+class FileLockImpl : public base::FileLock {
+public:
+
+    FileLockImpl(const std::string name, int fd, bool locked)
+        : name_(name)
+        , fd_(fd)
+        , locked_(locked) {
+        DCHECK_GE(fd_, 0);
+    }
+
+    virtual ~FileLockImpl() override {
+        auto rv = ::close(fd_);
+        DCHECK_EQ(0, rv);
+        ::unlink(name_.c_str());
+    }
+
+    static base::Status CreateFileLock(const char *name, bool locked,
+                                       FileLockImpl **rv) {
+        auto flags = O_CREAT | O_TRUNC | O_EXCL | O_WRONLY;
+        if (locked) {
+            flags |= O_EXLOCK;
+        }
+
+        auto fd = ::open(name, flags);
+        if (fd < 0) {
+            return Error();
+        }
+
+        *rv = new FileLockImpl(name, fd, locked);
+        return base::Status::OK();
+    }
+
+    virtual base::Status Lock() const override {
+        DCHECK(!locked());
+        if (flock(fd_, LOCK_EX) < 0) {
+            return Error();
+        } else {
+            locked_ = true;
+        }
+        return base::Status::OK();
+    }
+
+    virtual base::Status Unlock() const override {
+        DCHECK(locked());
+        if (flock(fd_, LOCK_UN) < 0) {
+            return Error();
+        } else {
+            locked_ = false;
+        }
+        return base::Status::OK();
+    }
+
+    virtual std::string name() const override { return name_; }
+
+    virtual bool locked() const override { return locked_; }
+
+    static base::Status Error() {
+        return base::Status::IOError(strerror(errno));
+    }
+
+private:
+    std::string name_;
+    int fd_;
+    mutable bool locked_;
+};
     
 } // namespace
 
@@ -201,6 +267,19 @@ base::Status CreateRandomAccessFile(const char *file_name,
     MappedMemoryImpl *impl = nullptr;
 
     auto rs = MappedMemoryImpl::CreateMapping(file_name, &impl);
+    if (!rs.ok()) {
+        return rs;
+    }
+
+    *DCHECK_NOTNULL(file) = impl;
+    return rs;
+}
+
+base::Status CreateFileLock(const char *file_name, bool locked,
+                            base::FileLock **file) {
+    FileLockImpl *impl = nullptr;
+
+    auto rs = FileLockImpl::CreateFileLock(file_name, locked, &impl);
     if (!rs.ok()) {
         return rs;
     }

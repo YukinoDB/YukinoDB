@@ -267,6 +267,19 @@ public:
     virtual base::Status Sync() = 0;
 };
 
+class FileLock : public DisableCopyAssign {
+public:
+    virtual ~FileLock();
+
+    virtual base::Status Lock() const = 0;
+
+    virtual base::Status Unlock() const = 0;
+
+    virtual std::string name() const = 0;
+
+    virtual bool locked() const = 0;
+};
+
 base::Status WriteAll(const std::string &file_name, const base::Slice &buf,
                       size_t *written);
 

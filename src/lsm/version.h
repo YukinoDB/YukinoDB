@@ -264,10 +264,9 @@ public:
         return next_file_number_ ++;
     }
 
-    bool NeedsCompaction() const {
-        // TODO:
-        return false;
-    }
+    bool NeedsCompaction() const;
+
+    base::Status Recovery(uint64_t file_number, std::vector<uint64_t> *logs);
 
     base::Status Apply(VersionPatch *patch, std::mutex *mutex);
 

@@ -79,6 +79,10 @@ inline std::string CurrentFileName(const std::string &db_name) {
     return base::Strings::Sprintf("%s/CURRENT", db_name.c_str());
 }
 
+inline std::string LockFileName(const std::string &db_name) {
+    return db_name + "/LOCK";
+}
+
 } // namespace lsm
 
 } // namespace yukino

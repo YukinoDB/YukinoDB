@@ -8,7 +8,7 @@ class Snapshot;
 struct ReadOptions {
     // TODO:
 
-    Snapshot *snapshot;
+    const Snapshot *snapshot;
 
     ReadOptions();
 };
