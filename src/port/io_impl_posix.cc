@@ -3,6 +3,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
+#include <algorithm>
 
 namespace yukino {
 
@@ -44,11 +45,17 @@ public:
     }
 
     virtual base::Status Skip(size_t count) override {
-        if (fseek(file_, count, SEEK_CUR) < 0) {
-            return Error();
+        auto avil = count;
+        base::Status rs;
+        while (avil) {
+            auto fill_size = std::min(avil, static_cast<size_t>(kFillingSize));
+            rs = Write(kFillingZero, fill_size, nullptr);
+            if (!rs.ok()) {
+                break;
+            }
+            avil -= fill_size;
         }
-        active_ += count;
-        return base::Status::OK();
+        return rs;
     }
 
     virtual base::Status Close() {
@@ -85,6 +92,20 @@ private:
     }
     
     FILE *file_ = nullptr;
+
+    enum { kFillingSize = 128 };
+    static const uint8_t kFillingZero[kFillingSize];
+};
+
+const uint8_t AppendFileImpl::kFillingZero[kFillingSize] = {
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 };
 
 class MappedMemoryImpl : public base::MappedMemory {

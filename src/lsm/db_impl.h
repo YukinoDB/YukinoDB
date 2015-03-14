@@ -66,6 +66,9 @@ public:
                                   MemoryTable *table);
     base::Status BuildTable(Iterator *iter, FileMetadata *metadata);
 
+    // For testing:
+    void TEST_WaitForBackground();
+
     constexpr static const auto kName = "lsm";
 
     class WritingHandler;

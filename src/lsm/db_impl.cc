@@ -72,11 +72,12 @@ DBImpl::DBImpl(const Options &opt, const std::string &name)
 
 base::Status DBImpl::Open(const Options &opt) {
 
-    if (write_buffer_size_ <= 1 * base::kMB) {
-        return base::Status::InvalidArgument("options.write_buffer_size too "
-                                             "small, should be > 1 MB");
-    }
+//    if (write_buffer_size_ <= 1 * base::kMB) {
+//        return base::Status::InvalidArgument("options.write_buffer_size too "
+//                                             "small, should be > 1 MB");
+//    }
 
+    shutting_down_.store(nullptr, std::memory_order_release);
     if (!env_->FileExists(CurrentFileName(db_name_))) {
 
         if (opt.create_if_missing) {
@@ -295,7 +296,6 @@ base::Status DBImpl::ReplayVersions(uint64_t file_number,
         }
         logs->push_back(patch.last_version());
 
-        DLOG(INFO) << "Replay apply: " << patch.last_version();
         builder.Apply(patch);
         versions_->Append(builder.Build());
     }
@@ -382,7 +382,7 @@ base::Status DBImpl::MakeRoomForWrite(bool force,
             MaybeScheduleCompaction();
         }
     }
-    
+
     return rs;
 }
 
@@ -406,6 +406,7 @@ void DBImpl::MaybeScheduleCompaction() {
 }
 
 void DBImpl::BackgroundWork() {
+    DLOG(INFO) << "Background work on...";
     std::unique_lock<std::mutex> lock(mutex_);
 
     DCHECK(background_active_);
@@ -422,7 +423,10 @@ void DBImpl::BackgroundCompaction() {
 
     // Need compact memory table first.
     if (immtable_.get() != nullptr) {
-        CompactMemoryTable();
+        auto rs = CompactMemoryTable();
+        if (!rs.ok()) {
+            DLOG(ERROR) << rs.ToString();
+        }
         return;
     }
 
@@ -507,9 +511,18 @@ base::Status DBImpl::BuildTable(Iterator *iter, FileMetadata *metadata) {
 
     file->Close();
     if (!rs.ok()) {
+        DLOG(ERROR) << "Build table fail: " << rs.ToString();
         env_->DeleteFile(file_name, false);
+        return rs;
     }
     return table_cache_->GetFileMetadata(metadata->number, metadata);
+}
+
+void DBImpl::TEST_WaitForBackground() {
+    if (background_active_) {
+        std::unique_lock<std::mutex> lock(mutex_);
+        background_cv_.wait(lock);
+    }
 }
 
 } // namespace lsm

@@ -92,7 +92,7 @@ base::Status Version::Get(const ReadOptions &options, const InternalKey &key,
     std::unique_ptr<Iterator> merger(CreateMergingIterator(&owned_->comparator_,
                                                            &iters[0],
                                                            iters.size()));
-    merger->Seek(key.key());
+    merger->Seek(key.key_slice());
     if (!merger->Valid()) {
         return base::Status::NotFound("");
     }

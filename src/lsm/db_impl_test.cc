@@ -92,6 +92,39 @@ TEST_F(DBImplTest, Recovery) {
     delete db;
 }
 
+TEST_F(DBImplTest, Level0Dump) {
+    Options options;
+
+    options.create_if_missing = true;
+    options.write_buffer_size = 128;
+
+    DBImpl db(options, kName);
+    auto rs = db.Open(options);
+    ASSERT_TRUE(rs.ok()) << rs.ToString();
+
+    auto defer = base::Defer([&options](){
+        options.env->DeleteFile(kName, true);
+    });
+
+    std::string value(64, '1');
+    WriteBatch batch;
+    batch.Put("aaa", value);
+    batch.Put("bbb", value);
+
+    rs = db.Write(WriteOptions(), &batch);
+    ASSERT_TRUE(rs.ok()) << rs.ToString();
+
+    rs = db.Put(WriteOptions(), "ccc", "3");
+    ASSERT_TRUE(rs.ok()) << rs.ToString();
+
+    db.TEST_WaitForBackground();
+
+    std::string found;
+    rs = db.Get(ReadOptions(), "bbb", &found);
+    ASSERT_TRUE(rs.ok()) << rs.ToString();
+    EXPECT_EQ(value, found);
+}
+
 } // namespace lsm
 
 } // namespace yukino

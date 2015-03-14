@@ -33,6 +33,10 @@ Iterator *TableCache::CreateIterator(const ReadOptions &options,
         }
         entry->file_name = buf;
         entry->table = new Table(&comparator_, entry->mmap);
+        rs = entry->table->Init();
+        if (!rs.ok()) {
+            return CreateErrorIterator(rs);
+        }
 
         cached_.emplace(file_number, entry);
     } else {

@@ -135,7 +135,12 @@ base::Status EnvImpl::CreateDir(const std::string& dirname) {
 
 base::Status EnvImpl::GetFileSize(const std::string& fname,
                                   uint64_t* file_size) {
-    // TODO
+    struct stat rv;
+    if (::stat(fname.c_str(), &rv) < 0) {
+        return Error();
+    }
+
+    *file_size = static_cast<uint64_t>(rv.st_size);
     return base::Status::OK();
 }
 

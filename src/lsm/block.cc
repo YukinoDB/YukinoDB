@@ -274,12 +274,14 @@ void BlockIterator::Seek(const base::Slice& target) {
         i = 0;
     }
 
-    PrepareRead(i);
-    for (auto j = 0; j < local_.size(); j++) {
-        if (comparator_->Compare(target, local_[j].key) <= 0) {
-            curr_local_   = j;
-            curr_restart_ = i;
-            return;
+    for (; i < static_cast<int32_t>(num_restarts_); i++) {
+        PrepareRead(i);
+        for (auto j = 0; j < local_.size(); j++) {
+            if (comparator_->Compare(target, local_[j].key) <= 0) {
+                curr_local_   = j;
+                curr_restart_ = i;
+                return;
+            }
         }
     }
 

@@ -110,7 +110,7 @@ Tag InternalKey::tag() const {
 
     base::BufferedWriter buf(size);
     buf.Write(key.data(), key.size(), nullptr);
-    buf.Write(value.data(), key.size(), nullptr);
+    buf.Write(value.data(), value.size(), nullptr);
 
     DCHECK_EQ(size, buf.len());
     return InternalKey(buf.Drop(),
