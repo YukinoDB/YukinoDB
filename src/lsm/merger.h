@@ -15,7 +15,7 @@ class IteratorWarpper;
 
 class MergingIterator : public Iterator {
 public:
-    MergingIterator(Comparator *comparator, Iterator **children, size_t n);
+    MergingIterator(const Comparator *comparator, Iterator **children, size_t n);
     virtual ~MergingIterator() override;
 
     virtual bool Valid() const override;
@@ -36,13 +36,13 @@ private:
     const size_t num_children_;
 
     IteratorWarpper *current_;
-    Comparator *comparator_;
+    const Comparator *comparator_;
 
     Direction direction_ = kForward;
 };
 
-Iterator *CreateMergingIterator(Comparator *comparator, Iterator **children,
-                                size_t n);
+Iterator *CreateMergingIterator(const Comparator *comparator,
+                                Iterator **children, size_t n);
 
 } // namespace lsm
 

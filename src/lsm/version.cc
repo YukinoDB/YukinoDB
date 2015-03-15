@@ -324,6 +324,28 @@ base::Status VersionSet::GetCompaction(VersionPatch *patch, Compaction **rv) {
     return base::Status::OK();
 }
 
+base::Status VersionSet::AddIterators(const ReadOptions &options,
+                                      std::vector<Iterator *> *rv) const {
+    base::Status rs;
+
+    for (auto i = 0; i < kMaxLevel; ++i) {
+        auto files = current()->file(i);
+
+        for (const auto &file : files) {
+            std::unique_ptr<Iterator> iter(table_cache_->CreateIterator(options,
+                                                                        file->number,
+                                                                        file->size));
+            rs = iter->status();
+            if (!rs.ok()) {
+                break;
+            }
+            rv->push_back(iter.release());
+        }
+    }
+
+    return rs;
+}
+
 base::Status VersionSet::Recovery(uint64_t file_number,
                                   std::vector<uint64_t> *logs) {
     base::MappedMemory *rv = nullptr;

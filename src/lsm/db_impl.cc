@@ -1,4 +1,5 @@
 #include "lsm/db_impl.h"
+#include "lsm/db_iter.h"
 #include "lsm/builtin.h"
 #include "lsm/format.h"
 #include "lsm/table_cache.h"
@@ -217,8 +218,44 @@ base::Status DBImpl::Get(const ReadOptions& options,
 }
 
 Iterator* DBImpl::NewIterator(const ReadOptions& options) {
-    // TODO:
-    return nullptr;
+    uint64_t version = 0;
+
+    std::unique_lock<std::mutex> lock(mutex_);
+    if (options.snapshot) {
+        version = SnapshotImpl::DownCast(options.snapshot)->version();
+    } else {
+        version = versions_->last_version();
+    }
+
+    std::vector<Iterator*> children;
+    children.push_back(mutable_->NewIterator());
+
+    if (immtable_.get()) {
+        children.push_back(immtable_->NewIterator());
+    }
+
+    auto rs = versions_->AddIterators(options, &children);
+    if (!rs.ok()) {
+        for (auto iter : children) {
+            delete iter;
+        }
+        return CreateErrorIterator(rs);
+    }
+
+    auto rv = CreateDBIterator(internal_comparator_.get(), &children[0],
+                               children.size(), version);
+    mutable_->AddRef();
+    rv->RegisterCleanup([this]() {
+        mutable_->Release();
+    });
+
+    if (immtable_.get()) {
+        immtable_->AddRef();
+        rv->RegisterCleanup([this] () {
+            immtable_->Release();
+        });
+    }
+    return rv;
 }
 
 const Snapshot* DBImpl::GetSnapshot() {

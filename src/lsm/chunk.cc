@@ -89,7 +89,7 @@ Tag InternalKey::tag() const {
 
     base::BufferedWriter buf(size);
     buf.Write(key.data(), key.size(), nullptr);
-    buf.WriteFixed64(Tag(version, 0).Encode());
+    buf.WriteFixed64(Tag(version, kFlagValueForSeek).Encode());
 
     DCHECK_EQ(size, buf.len());
     return InternalKey(buf.Drop(), static_cast<uint32_t>(key.size()));
@@ -123,6 +123,17 @@ InternalKey::InternalKey(char *packed_data, uint64_t size, uint32_t user_key_siz
 
 InternalKey::InternalKey(char *key, uint32_t user_key_size)
     : Chunk(key, user_key_size + Tag::kTagSize) {
+}
+
+/*static*/ base::Slice InternalKey::ExtractUserKey(const base::Slice &raw) {
+    base::BufferedReader rd(raw.data(), raw.size());
+    return rd.Read(raw.size() - Tag::kTagSize);
+}
+
+/*static*/ Tag InternalKey::ExtractTag(const base::Slice &raw) {
+    base::BufferedReader rd(raw.data(), raw.size());
+    rd.Skip(raw.size() - Tag::kTagSize);
+    return Tag::Decode(rd.ReadFixed64());
 }
 
 } // namespace lsm

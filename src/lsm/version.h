@@ -18,6 +18,7 @@ namespace yukino {
 class Env;
 class Options;
 class ReadOptions;
+class Iterator;
 
 namespace base {
 
@@ -271,6 +272,9 @@ public:
     bool NeedsCompaction() const;
 
     base::Status GetCompaction(VersionPatch *patch, Compaction **rv);
+
+    base::Status AddIterators(const ReadOptions &options,
+                              std::vector<Iterator *> *rv) const;
 
     base::Status Recovery(uint64_t file_number, std::vector<uint64_t> *logs);
 

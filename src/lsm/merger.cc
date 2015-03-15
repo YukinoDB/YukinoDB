@@ -63,7 +63,8 @@ private:
 
 };
 
-MergingIterator::MergingIterator(Comparator *comparator, Iterator **children,
+MergingIterator::MergingIterator(const Comparator *comparator,
+                                 Iterator **children,
                                  size_t n)
     : children_(new IteratorWarpper[n])
     , comparator_(comparator)
@@ -220,7 +221,8 @@ void MergingIterator::FindLargest() {
     current_ = largest;
 }
 
-Iterator *CreateMergingIterator(Comparator *comparator, Iterator **children,
+Iterator *CreateMergingIterator(const Comparator *comparator,
+                                Iterator **children,
                                 size_t n) {
     switch (n) {
     case 0:

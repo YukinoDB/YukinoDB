@@ -87,6 +87,10 @@ public:
 
     static InternalKey CreateKey(const base::Slice &key, uint64_t version);
 
+    static base::Slice ExtractUserKey(const base::Slice &raw);
+
+    static Tag ExtractTag(const base::Slice &raw);
+
 private:
     InternalKey(char *packed_data, uint64_t size, uint32_t user_key_size);
     InternalKey(char *key, uint32_t user_key_size);
