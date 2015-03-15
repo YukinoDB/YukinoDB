@@ -5,6 +5,7 @@
 #include "lsm/format.h"
 #include "lsm/builtin.h"
 #include "lsm/chunk.h"
+#include "base/io.h"
 #include "yukino/env.h"
 #include "yukino/options.h"
 #include "yukino/read_options.h"
@@ -53,16 +54,30 @@ base::Status Compaction::Compact(TableBuilder *builder) {
 
     origin_size_ = 0;
     target_size_ = 0;
+    base::Slice deletion_key;
     for (; merger->Valid(); merger->Next()) {
         DCHECK_GE(merger->key().size(), Tag::kTagSize);
 
         origin_size_ += (merger->key().size() + merger->value().size());
 
-        auto p = merger->key().data() + merger->key().size() - Tag::kTagSize;
-        auto tag = Tag::Decode(*reinterpret_cast<const Tag::EncodedType*>(p));
+        base::BufferedReader rd(merger->key().data(), merger->key().size());
+        auto user_key = rd.Read(merger->key().size() - Tag::kTagSize);
+        auto tag = Tag::Decode(rd.ReadFixed64());
+        DCHECK_EQ(0, rd.active());
 
-        if (tag.version < oldest_version_ || tag.flag == kFlagDeletion) {
+        if (tag.version < oldest_version_) {
             continue;
+        }
+
+        if (tag.flag == kFlagDeletion) {
+            deletion_key = user_key;
+            continue;
+        }
+
+        if (comparator_.delegated()->Compare(user_key, deletion_key) == 0) {
+            continue;
+        } else {
+            deletion_key = base::Slice();
         }
 
         auto chunk = Chunk::CreateKeyValue(merger->key(), merger->value());

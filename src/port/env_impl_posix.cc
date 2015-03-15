@@ -42,7 +42,7 @@ bool EnvImpl::FileExists(const std::string& fname) {
 bool IsDir(const char *path) {
     struct stat buf;
     if (::stat(path, &buf) < 0) {
-        PLOG(ERROR) << "stat() fail, cause: ";
+        PLOG(WARNING) << "stat() fail, cause: ";
         return false;
     }
 

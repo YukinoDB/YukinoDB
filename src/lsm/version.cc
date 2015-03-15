@@ -2,6 +2,7 @@
 #include "lsm/table_cache.h"
 #include "lsm/merger.h"
 #include "lsm/log.h"
+#include "lsm/compaction.h"
 #include "yukino/options.h"
 #include "yukino/iterator.h"
 #include "yukino/env.h"
@@ -251,8 +252,76 @@ bool VersionSet::NeedsCompaction() const {
         return true;
     }
 
-    // TODO:
+    for (auto i = 1; i < kMaxLevel; i++) {
+        if (current()->SizeLevelFiles(i) > kMaxSizeLevel0File * (i + 1)) {
+            return true;
+        }
+    }
     return false;
+}
+
+base::Status VersionSet::GetCompaction(VersionPatch *patch, Compaction **rv) {
+    std::unique_ptr<Compaction> compaction(new Compaction(db_name_, comparator_,
+                                                          table_cache_));
+
+    compaction->set_target(GenerateFileNumber());
+
+    if (current()->NumberLevelFiles(0) > kMaxNumberLevel0File) {
+        auto num_should_compact = current()->NumberLevelFiles(0) / 2;
+
+        std::vector<base::Handle<FileMetadata>> files(current()->file(0));
+        std::sort(files.begin(), files.end(),
+                  [](const base::Handle<FileMetadata> &a,
+                     const base::Handle<FileMetadata> &b) {
+                      return a->ctime > b->ctime;
+                  });
+
+        for (auto i = 0; i < num_should_compact; ++i) {
+
+            auto rs = compaction->AddOriginFile(files[i]->number,
+                                                files[i]->size);
+            if (!rs.ok()) {
+                return rs;
+            }
+            patch->DeleteFile(0, files[i]->number);
+        }
+    } else if (current()->SizeLevelFiles(0) > kMaxSizeLevel0File) {
+        std::vector<base::Handle<FileMetadata>> files(current()->file(0));
+        std::sort(files.begin(), files.end(),
+                  [](const base::Handle<FileMetadata> &a,
+                     const base::Handle<FileMetadata> &b) {
+                      return a->size > b->size;
+                  });
+
+        auto rs = compaction->AddOriginFile(files[0]->number,
+                                            files[0]->size);
+        if (!rs.ok()) {
+            return rs;
+        }
+        patch->DeleteFile(0, files[0]->number);
+    } else {
+        auto found = 0;
+        for (auto i = 1; i < kMaxLevel; i++) {
+            if (current()->SizeLevelFiles(i) > kMaxSizeLevel0File * (i + 1)) {
+                found = i;
+                break;
+            }
+        }
+
+        DCHECK_GT(found, 0);
+        DCHECK(!current()->file(found).empty());
+        auto level = (found == (kMaxLevel - 1)) ? found : found + 1;
+        for (const auto &file : current()->file(found)) {
+            auto rs = compaction->AddOriginFile(file->number, file->size);
+            if (!rs.ok()) {
+                return rs;
+            }
+            patch->DeleteFile(level, file->number);
+        }
+    }
+
+    *rv = compaction.release();
+    return base::Status::OK();
 }
 
 base::Status VersionSet::Recovery(uint64_t file_number,

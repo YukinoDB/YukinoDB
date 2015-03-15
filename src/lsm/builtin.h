@@ -35,10 +35,6 @@ static const size_t kMaxSizeLevel0File   = 80 * base::kMB;
 
 static const int kMaxLevel = 4;
 
-static const char *kTableExtendName = "sst";
-static const char *kCurrentFileName = "CURRENT";
-static const char *kManifesFileNametPrefix = "MANIFEST";
-
 static const size_t kLogBlockTrailerSize = sizeof(uint64_t) // block size
     + sizeof(uint32_t); // crc32 check sum
 

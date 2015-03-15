@@ -22,16 +22,13 @@ Iterator *TableCache::CreateIterator(const ReadOptions &options,
 
     auto found = cached_.find(file_number);
     if (found == cached_.end()) {
-        char buf[1024];
-        ::snprintf(buf, sizeof(buf), "%s/%llu.%s", db_name_.c_str(),
-                   file_number, kTableExtendName);
-
         entry = new CacheEntry;
-        auto rs = env_->CreateRandomAccessFile(buf, &entry->mmap);
+        entry->file_name = TableFileName(db_name_, file_number);
+
+        auto rs = env_->CreateRandomAccessFile(entry->file_name, &entry->mmap);
         if (!rs.ok()) {
             return CreateErrorIterator(rs);
         }
-        entry->file_name = buf;
         entry->table = new Table(&comparator_, entry->mmap);
         rs = entry->table->Init();
         if (!rs.ok()) {

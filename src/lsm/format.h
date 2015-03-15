@@ -5,6 +5,8 @@
 #include "base/base.h"
 #include "glog/logging.h"
 #include <stdint.h>
+#include <stdlib.h>
+#include <tuple>
 
 namespace yukino {
 
@@ -82,6 +84,46 @@ inline std::string CurrentFileName(const std::string &db_name) {
 inline std::string LockFileName(const std::string &db_name) {
     return db_name + "/LOCK";
 }
+
+
+struct Files {
+    enum Kind {
+        kUnknown,
+        kLog,
+        kTable,
+        kManifest,
+        kCurrent,
+        kLock,
+    };
+
+    constexpr static const auto kLockName = "LOCK";
+    constexpr static const auto kCurrentName = "CURRENT";
+
+    constexpr static const auto kManifestPrefix = "MANIFEST-";
+    static const auto kManifestPrefixLength = 9;
+
+    constexpr static const auto kLogPostfix = ".log";
+    static const auto kLogPostfixLength = 4;
+
+    constexpr static const auto kTablePostfix = ".sst";
+    static const auto kTablePostfixLength = 4;
+
+    static std::tuple<Kind, uint64_t> ParseName(const std::string &name);
+
+    static bool IsNumber(const std::string &maybe) {
+        if (maybe.empty()) {
+            return false;
+        }
+        for (auto c : maybe) {
+            if (!::isdigit(c)) {
+                return false;
+            }
+        }
+        return true;
+    }
+};
+
+
 
 } // namespace lsm
 

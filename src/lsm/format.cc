@@ -46,6 +46,38 @@ void InternalKeyComparator::FindShortSuccessor(std::string* key) const {
     return delegated_->FindShortSuccessor(key);
 }
 
+/*static*/ std::tuple<Files::Kind, uint64_t>
+Files::ParseName(const std::string &name) {
+    auto rv = std::make_tuple(kUnknown, -1);
+
+    if (name == kLockName) {
+        rv = std::make_tuple(kLock, -1);
+    } else if (name == kCurrentName) {
+        rv = std::make_tuple(kCurrent, -1);
+    } else if (name.find(kManifestPrefix) == 0) {
+        // MANIFEST-1
+        auto buf = name.substr(kManifestPrefixLength);
+        if (IsNumber(buf)) {
+            rv = std::make_tuple(kManifest, ::atoll(buf.c_str()));
+        }
+    } else if (name.rfind(kLogPostfix) == (name.length() - kLogPostfixLength)) {
+        // 1.log len(5) postfix(4)
+        auto buf = name.substr(0, name.length() - kLogPostfixLength);
+        if (IsNumber(buf)) {
+            rv = std::make_tuple(kLog, ::atoll(buf.c_str()));
+        }
+    } else if (name.rfind(kTablePostfix) ==
+               (name.length() - kTablePostfixLength)) {
+        // 1.sst len(5) postfix(4)
+        auto buf = name.substr(0, name.length() - kTablePostfixLength);
+        if (IsNumber(buf)) {
+            rv = std::make_tuple(kTable, ::atoll(buf.c_str()));
+        }
+    }
+
+    return rv;
+}
+
 } // namespace lsm
 
 } // namespace yukino

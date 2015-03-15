@@ -13,10 +13,23 @@
 #include "yukino/write_options.h"
 #include "yukino/env.h"
 #include "glog/logging.h"
+#include <chrono>
+#include <map>
 
 namespace yukino {
 
 namespace lsm {
+
+namespace {
+
+inline uint64_t now_microseconds() {
+    using namespace std::chrono;
+
+    auto now = high_resolution_clock::now();
+    return duration_cast<microseconds>(now.time_since_epoch()).count();
+}
+
+} // namespace
 
 SnapshotImpl::~SnapshotImpl() {
 }
@@ -326,6 +339,55 @@ base::Status DBImpl::Redo(uint64_t file_number, uint64_t last_version) {
     return reader.status();
 }
 
+void DBImpl::DeleteObsoleteFiles() {
+    std::vector<std::string> children;
+
+    auto rs = env_->GetChildren(db_name_, &children);
+    if (!rs.ok()) {
+        LOG(ERROR) << "Can not open db: " << db_name_
+                   << ", cause: " << rs.ToString();
+        return;
+    }
+
+    std::map<uint64_t, std::string> exists;
+    for (const auto &child : children) {
+        auto rv = Files::ParseName(child);
+
+        switch (std::get<0>(rv)) {
+        case Files::kLog:
+        case Files::kTable:
+        case Files::kManifest:
+            exists.emplace(std::get<1>(rv), child);
+            break;
+
+        default:
+            break;
+        }
+    }
+
+    exists.erase(versions_->redo_log_number());
+    exists.erase(versions_->manifest_file_number());
+    exists.erase(log_file_number_);
+    for (auto i = 0; i < kMaxLevel; i++) {
+        auto files = versions_->current()->file(i);
+
+        for (const auto &metadata : files) {
+            exists.erase(metadata->number);
+        }
+    }
+
+    for (const auto &entry : exists) {
+        auto rs = env_->DeleteFile(db_name_ + "/" + entry.second, false);
+        if (rs.ok()) {
+            DLOG(INFO) << "Delete obsolete file: " << entry.second;
+        } else {
+            DLOG(INFO) << "Delete obsolete file: " << entry.second
+                       << " fail, cause: " << rs.ToString();
+        }
+        table_cache_->Invalid(entry.first);
+    }
+}
+
 // REQUIRES: mutex_ is held
 // REQUIRES: this thread is the current logger
 // That's means, the function must be lock.
@@ -414,7 +476,15 @@ void DBImpl::BackgroundWork() {
     background_cv_.notify_all();
 }
 
+// REQUIRES: mutex_.lock()
 void DBImpl::BackgroundCompaction() {
+    using namespace std::chrono;
+    auto start = high_resolution_clock::now();
+    auto defer = base::Defer([&start] () {
+        auto epch = high_resolution_clock::now() - start;
+        LOG(INFO) << "Compaction epch: "
+                  << duration_cast<milliseconds>(epch).count() << " ms";
+    });
 
     // Need compact memory table first.
     if (immtable_.get() != nullptr) {
@@ -428,10 +498,46 @@ void DBImpl::BackgroundCompaction() {
 
 
     if (versions_->NeedsCompaction()) {
+        Compaction *rv_cpt;
+        VersionPatch patch("");
+        auto rs = versions_->GetCompaction(&patch, &rv_cpt);
+        if (!rs.ok()) {
+            background_error_ = rs;
+            return;
+        }
 
+        mutex_.unlock();
+
+        std::unique_ptr<Compaction> compaction(rv_cpt);
+
+        base::AppendFile *rv_file = nullptr;
+        std::string file_name(TableFileName(db_name_,0));
+        rs = env_->CreateAppendFile(file_name, &rv_file);
+        if (!rs.ok()) {
+            background_error_ = rs;
+            return;
+        }
+
+        std::unique_ptr<base::AppendFile> file(rv_file);
+        TableBuilder builder(TableOptions(), file.get());
+        rs = compaction->Compact(&builder);
+        if (!rs.ok()) {
+            background_error_ = rs;
+            return;
+        }
+
+        mutex_.lock();
+
+        rs = versions_->Apply(&patch, &mutex_);
+        if (!rs.ok()) {
+            background_error_ = rs;
+            return;
+        }
+        DeleteObsoleteFiles();
     }
 }
 
+// REQUIRES: mutex_.lock()
 base::Status DBImpl::CompactMemoryTable() {
     DCHECK_NOTNULL(immtable_.get());
 
@@ -458,7 +564,7 @@ base::Status DBImpl::CompactMemoryTable() {
     // compact finish, should release the immtable_
     immtable_ = nullptr;
 
-    // TODO: DeleteObsoleteFiles
+    DeleteObsoleteFiles();
     return base::Status::OK();
 }
 
@@ -525,6 +631,7 @@ base::Status DBImpl::BuildTable(Iterator *iter, FileMetadata *metadata) {
     }
 //    DLOG(INFO) << "Build table: " << metadata->number
 //               << " ok, count: " << counter;
+    metadata->ctime = now_microseconds();
     return table_cache_->GetFileMetadata(metadata->number, metadata);
 }
 

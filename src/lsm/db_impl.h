@@ -139,6 +139,7 @@ public:
     base::Status ReplayVersions(uint64_t file_number,
                                 std::vector<uint64_t> *version);
     base::Status Redo(uint64_t log_file_number, uint64_t last_version);
+    void DeleteObsoleteFiles();
 
     base::Status MakeRoomForWrite(bool force, std::unique_lock<std::mutex> *lock);
     void MaybeScheduleCompaction();

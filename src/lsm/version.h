@@ -31,6 +31,7 @@ class VersionSet;
 class TableCache;
 class LogWriter;
 class VersionBuilder;
+class Compaction;
 
 struct FileMetadata : public base::ReferenceCounted<FileMetadata> {
 
@@ -67,6 +68,9 @@ public:
     explicit VersionPatch(const std::string &comparator)
         : comparator_(comparator) {
         Reset();
+        if (!comparator.empty()) {
+            set_field(kComparator);
+        }
     }
 
     const std::string &comparator() const {
@@ -266,6 +270,8 @@ public:
 
     bool NeedsCompaction() const;
 
+    base::Status GetCompaction(VersionPatch *patch, Compaction **rv);
+
     base::Status Recovery(uint64_t file_number, std::vector<uint64_t> *logs);
 
     base::Status Apply(VersionPatch *patch, std::mutex *mutex);
@@ -281,6 +287,8 @@ public:
     uint64_t redo_log_number() const { return redo_log_number_; }
 
     uint64_t prev_log_number() const { return prev_log_number_; }
+
+    uint64_t manifest_file_number() const { return manifest_file_number_; }
 
     Version *current() const { return current_; }
 
