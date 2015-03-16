@@ -536,7 +536,7 @@ void DBImpl::BackgroundCompaction() {
 
     if (versions_->NeedsCompaction()) {
         Compaction *rv_cpt;
-        VersionPatch patch("");
+        VersionPatch patch;
         auto rs = versions_->GetCompaction(&patch, &rv_cpt);
         if (!rs.ok()) {
             background_error_ = rs;

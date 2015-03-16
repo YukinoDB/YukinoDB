@@ -67,10 +67,11 @@ base::Status Version::Get(const ReadOptions &options, const InternalKey &key,
             continue;
         }
 
-        const auto &metadata = file(i).at(0);
-        if (ucmp->Compare(ukey, metadata->smallest_key.user_key_slice()) >= 0 ||
-            ucmp->Compare(ukey, metadata->largest_key.user_key_slice()) <= 0) {
-            maybe_file.push_back(metadata);
+        for (const auto &metadata : file(i)) {
+            if (ucmp->Compare(ukey, metadata->smallest_key.user_key_slice()) >= 0 ||
+                ucmp->Compare(ukey, metadata->largest_key.user_key_slice()) <= 0) {
+                maybe_file.push_back(metadata);
+            }
         }
     }
 
@@ -357,7 +358,7 @@ base::Status VersionSet::Recovery(uint64_t file_number,
     std::unique_ptr<base::MappedMemory> file(rv);
     Log::Reader reader(file->buf(), file->size(), true, Log::kDefaultBlockSize);
 
-    VersionPatch patch("");
+    VersionPatch patch;
     VersionSet::Builder builder(this, current());
     base::Slice record;
     std::string buf;

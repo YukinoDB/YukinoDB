@@ -67,16 +67,22 @@ public:
     static const auto kNum32Bits = (kMaxFields + 31) / 32;
 
     explicit VersionPatch(const std::string &comparator)
-        : comparator_(comparator) {
+        : VersionPatch() {
+        set_comparator(comparator);
+    }
+
+    VersionPatch() {
         Reset();
-        if (!comparator.empty()) {
-            set_field(kComparator);
-        }
     }
 
     const std::string &comparator() const {
         DCHECK(has_field(kComparator));
         return comparator_;
+    }
+
+    void set_comparator(const std::string &comparator) {
+        set_field(kComparator);
+        comparator_ = comparator;
     }
 
     uint64_t last_version() const {
