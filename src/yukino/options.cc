@@ -10,7 +10,9 @@ Options::Options()
     , create_if_missing(false)
     , error_if_exists(false)
     , env(Env::Default())
-    , write_buffer_size(4 * base::kMB) {
+    , write_buffer_size(4 * base::kMB)
+    , block_size(4 * base::kKB)
+    , block_restart_interval(16) {
 }
 
 } // namespace yukino

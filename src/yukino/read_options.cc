@@ -3,8 +3,9 @@
 namespace yukino {
 
 ReadOptions::ReadOptions()
-    : snapshot(nullptr) {
-    // TODO:
+    : verify_checksums(true)
+    , fill_cache(true)
+    , snapshot(nullptr) {
 }
 
 } // namespace yukino

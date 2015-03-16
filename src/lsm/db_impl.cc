@@ -78,6 +78,8 @@ private:
 
 DBImpl::DBImpl(const Options &opt, const std::string &name)
     : env_(DCHECK_NOTNULL(opt.env))
+    , block_size_(opt.block_size)
+    , block_restart_interval_(opt.block_restart_interval)
     , db_name_(name)
     , internal_comparator_(new InternalKeyComparator(opt.comparator))
     , table_cache_(new TableCache(db_name_, opt))
@@ -88,6 +90,14 @@ DBImpl::DBImpl(const Options &opt, const std::string &name)
 }
 
 base::Status DBImpl::Open(const Options &opt) {
+
+    if (block_size_ == 0 || block_size_ > INT32_MAX) {
+        return base::Status::InvalidArgument("block_size out of range");
+    }
+
+    if (block_restart_interval_ <= 0) {
+        return base::Status::InvalidArgument("block_restart_interval out of range");
+    }
 
 //    if (write_buffer_size_ <= 1 * base::kMB) {
 //        return base::Status::InvalidArgument("options.write_buffer_size too "
@@ -167,9 +177,11 @@ base::Status DBImpl::Write(const WriteOptions& options,
             return rs;
         }
 
-        rs = log_file_->Sync();
-        if (!rs.ok()) {
-            return rs;
+        if (options.sync) {
+            rs = log_file_->Sync();
+            if (!rs.ok()) {
+                return rs;
+            }
         }
     }
 
@@ -556,7 +568,10 @@ void DBImpl::BackgroundCompaction() {
         }
 
         std::unique_ptr<base::AppendFile> file(rv_file);
-        TableBuilder builder(TableOptions(), file.get());
+        TableOptions options;
+        options.block_size       = static_cast<uint32_t>(block_size_);
+        options.restart_interval = block_restart_interval_;
+        TableBuilder builder(options, file.get());
         rs = compaction->Compact(&builder);
         if (!rs.ok()) {
             background_error_ = rs;
@@ -641,7 +656,10 @@ base::Status DBImpl::BuildTable(Iterator *iter, FileMetadata *metadata) {
 
     auto counter = 0;
     std::unique_ptr<base::AppendFile> file(rv);
-    TableBuilder builder(TableOptions(), file.get());
+    TableOptions options;
+    options.block_size       = static_cast<uint32_t>(block_size_);
+    options.restart_interval = block_restart_interval_;
+    TableBuilder builder(options, file.get());
     for (iter->SeekToFirst(); iter->Valid(); iter->Next()) {
         rs = builder.Append(Chunk::CreateKeyValue(iter->key(), iter->value()));
         if (!rs.ok()) {

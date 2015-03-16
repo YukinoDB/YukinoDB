@@ -6,7 +6,6 @@
 #include "base/crc32.h"
 #include "base/io.h"
 #include "glog/logging.h"
-#include <unistd.h>
 #include <vector>
 
 namespace yukino {
@@ -17,7 +16,7 @@ TableOptions::TableOptions()
     : file_version(kFileVersion)
     , magic_number(kMagicNumber)
     // set block size to page size(normal: 8kb)
-    , block_size(static_cast<uint32_t>(sysconf(_SC_PAGESIZE)))
+    , block_size(8 * base::kKB)
     , restart_interval(kRestartInterval) {
 }
 

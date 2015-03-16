@@ -160,6 +160,8 @@ private:
 
     Env *env_ = nullptr;
     std::string db_name_;
+    const size_t block_size_;
+    const int block_restart_interval_;
 
     base::Handle<MemoryTable> mutable_;
     base::Handle<MemoryTable> immtable_;
