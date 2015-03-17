@@ -209,6 +209,23 @@ TEST_F(DBImplTest, DumpThenRecovery) {
     }
 }
 
+TEST_F(DBImplTest, DISABLED_LargeWriteForDumping) {
+    Options options;
+
+    options.create_if_missing = true;
+
+    std::string value(128, 'f');
+    DBImpl db(options, kName);
+    auto rs = db.Open(options);
+    ASSERT_TRUE(rs.ok()) << rs.ToString();
+
+    for (auto i = 0; i < base::kMB; i++) {
+        rs = db.Put(WriteOptions(), "aaaa", value);
+        ASSERT_TRUE(rs.ok()) << rs.ToString();
+    }
+    db.TEST_DumpVersions();
+}
+
 } // namespace lsm
 
 } // namespace yukino

@@ -152,6 +152,7 @@ public:
 
     // For testing:
     void TEST_WaitForBackground();
+    void TEST_DumpVersions();
 
     constexpr static const auto kName = "lsm";
 

@@ -30,10 +30,11 @@ Compaction::~Compaction() {
 base::Status Compaction::AddOriginFile(uint64_t number, uint64_t size) {
     std::unique_ptr<Iterator> iter(cache_->CreateIterator(ReadOptions(), number,
                                                           size));
-    if (iter->status().ok()) {
-        AddOriginIterator(iter.release());
+    if (!iter->status().ok()) {
+        return iter->status();
     }
-    return iter->status();
+    AddOriginIterator(iter.release());
+    return base::Status::OK();
 }
 
 base::Status Compaction::Compact(TableBuilder *builder) {

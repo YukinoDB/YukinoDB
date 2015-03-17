@@ -286,6 +286,7 @@ base::Status VersionSet::GetCompaction(VersionPatch *patch, Compaction **rv) {
             }
             patch->DeleteFile(0, files[i]->number);
         }
+        compaction->set_target_level(1);
     } else if (current()->SizeLevelFiles(0) > kMaxSizeLevel0File) {
         std::vector<base::Handle<FileMetadata>> files(current()->file(0));
         std::sort(files.begin(), files.end(),
@@ -300,6 +301,7 @@ base::Status VersionSet::GetCompaction(VersionPatch *patch, Compaction **rv) {
             return rs;
         }
         patch->DeleteFile(0, files[0]->number);
+        compaction->set_target_level(1);
     } else {
         auto found = 0;
         for (auto i = 1; i < kMaxLevel; i++) {
@@ -317,10 +319,12 @@ base::Status VersionSet::GetCompaction(VersionPatch *patch, Compaction **rv) {
             if (!rs.ok()) {
                 return rs;
             }
-            patch->DeleteFile(level, file->number);
+            patch->DeleteFile(found, file->number);
         }
+        compaction->set_target_level(level);
     }
 
+    DCHECK_GT(compaction->target_level(), 0);
     *rv = compaction.release();
     return base::Status::OK();
 }
@@ -533,7 +537,7 @@ Version *VersionBuilder::Build() {
 
         for (const auto &metadata : level) {
 
-            if (levels_[i].deletion.find(metadata->number) !=
+            if (levels_[i].deletion.find(metadata->number) ==
                 levels_[i].deletion.end()) {
                 version->mutable_file(i)->push_back(metadata);
             }

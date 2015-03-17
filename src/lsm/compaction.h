@@ -49,6 +49,8 @@ public:
 
     void set_target(uint64_t number) { target_file_number_ = number; }
 
+    void set_target_level(int level) { target_level_ = level; }
+
     void set_oldest_version(uint64_t version) { oldest_version_ = version; }
 
     void set_compaction_point(const base::Slice &key) { compaction_point_ = key; }
@@ -57,11 +59,16 @@ public:
         return origin_file_numbers_;
     }
 
+    uint64_t target_file_number() const { return target_file_number_; }
+
+    int target_level() const { return target_level_; }
+
     // REQUIRES: Compact
     uint64_t origin_size() const { return origin_size_; }
 
     // REQUIRES: Compact
     uint64_t target_size() const { return target_size_; }
+
 
 private:
     std::string db_name_;
@@ -76,6 +83,7 @@ private:
 
     uint64_t origin_size_ = 0;
     uint64_t target_size_ = 0;
+    int target_level_ = 0;
 
     InternalKeyComparator comparator_;
 };

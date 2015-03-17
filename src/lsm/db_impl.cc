@@ -450,7 +450,7 @@ base::Status DBImpl::MakeRoomForWrite(bool force,
         if (!background_error_.ok()) {
             rs = background_error_;
             break;
-        } else if (allow_delay &&
+        } else if (allow_delay && background_active_ &&
                    versions_->NumberLevelFiles(0) >= kMaxNumberLevel0File) {
             mutex_.unlock();
 
@@ -462,8 +462,11 @@ base::Status DBImpl::MakeRoomForWrite(bool force,
                    mutable_->memory_usage_size() <= write_buffer_size_) {
             break;
         } else if (immtable_.get()) {
-            background_cv_.wait(*lock);
-        } else if (versions_->NumberLevelFiles(0) >= kMaxNumberLevel0File) {
+            if (background_active_) {
+                background_cv_.wait(*lock);
+            }
+        } else if (background_active_ &&
+                   versions_->NumberLevelFiles(0) >= kMaxNumberLevel0File) {
             LOG(INFO) << "Level-0 files: " << versions_->NumberLevelFiles(0)
                 << " wait...";
             background_cv_.wait(*lock);
@@ -560,7 +563,8 @@ void DBImpl::BackgroundCompaction() {
         std::unique_ptr<Compaction> compaction(rv_cpt);
 
         base::AppendFile *rv_file = nullptr;
-        std::string file_name(TableFileName(db_name_,0));
+        std::string file_name(TableFileName(db_name_,
+                                            compaction->target_file_number()));
         rs = env_->CreateAppendFile(file_name, &rv_file);
         if (!rs.ok()) {
             background_error_ = rs;
@@ -578,8 +582,17 @@ void DBImpl::BackgroundCompaction() {
             return;
         }
 
+        file->Close();
         mutex_.lock();
 
+        base::Handle<FileMetadata> metadata(new FileMetadata(compaction->target_file_number()));
+        rs = table_cache_->GetFileMetadata(metadata->number, metadata.get());
+        if (!rs.ok()) {
+            background_error_ = rs;
+            return;
+        }
+
+        patch.CreateFile(compaction->target_level(), metadata.get());
         rs = versions_->Apply(&patch, &mutex_);
         if (!rs.ok()) {
             background_error_ = rs;
@@ -694,6 +707,20 @@ void DBImpl::TEST_WaitForBackground() {
     std::unique_lock<std::mutex> lock(mutex_);
     if (background_active_) {
         background_cv_.wait_for(lock, std::chrono::seconds(1));
+    }
+}
+
+void DBImpl::TEST_DumpVersions() {
+    for (auto i = 0; i < kMaxLevel; ++i) {
+        std::string text;
+
+        for (const auto &metadata : versions_->current()->file(i)) {
+            text.append(base::Strings::Sprintf("[%llu.sst %llu] ",
+                                               metadata->number,
+                                               metadata->size));
+        }
+
+        DLOG(INFO) << "level-" << i << " " << text;
     }
 }
 
