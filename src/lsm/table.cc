@@ -125,19 +125,37 @@ void TableIterator::SeekToLast() {
 
 void TableIterator::Seek(const base::Slice& target) {
     direction_ = kForward;
+    block_idx_ = -1;
 
-    for (size_t i = 0; i < owned_->index_.size(); ++i) {
+    int64_t left = 0, right = owned_->index_.size() - 1, middle = 0;
+    while (left <= right) {
+        middle = (left + right) / 2;
+
+        const auto &entry = owned_->index_[middle];
+        auto rv = owned_->comparator_->Compare(target, entry.key);
+        if (rv < 0) {
+            right = middle - 1;
+        } else if (rv > 0) {
+            left = middle + 1;
+        } else {
+            SeekByHandle(entry.handle, true);
+            block_idx_ = middle;
+            block_iter_->Seek(target);
+            return;
+        }
+    }
+
+    for (auto i = middle; i < owned_->index_.size(); ++i) {
         const auto &entry = owned_->index_[i];
+        auto rv = owned_->comparator_->Compare(target, entry.key);
 
-        if (owned_->comparator_->Compare(target, entry.key) <= 0) {
+        if (rv < 0) {
             SeekByHandle(entry.handle, true);
             block_idx_ = i;
             block_iter_->Seek(target);
             return;
         }
     }
-
-    status_ = base::Status::NotFound("Seek()");
 }
 
 void TableIterator::Next() {

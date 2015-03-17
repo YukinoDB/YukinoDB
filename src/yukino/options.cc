@@ -12,7 +12,8 @@ Options::Options()
     , env(Env::Default())
     , write_buffer_size(4 * base::kMB)
     , block_size(4 * base::kKB)
-    , block_restart_interval(16) {
+    , block_restart_interval(16)
+    , max_open_files(1000) {
 }
 
 } // namespace yukino

@@ -218,5 +218,46 @@ TEST_F(TableBuilderTest, LargeBlock) {
     EXPECT_EQ(blob_1block, iter.value());
 }
 
+int FindLessOrEqual(int *a, int n, int k) {
+
+    int left = 0, right = n - 1, middle = 0;
+    while (left <= right) {
+        middle = (left + right) / 2;
+        if (k < a[middle]) {
+            right = middle - 1;
+        } else if (k > a[middle]) {
+            left = middle + 1;
+        } else {
+            return middle;
+        }
+    }
+
+    for (auto i = middle; i < n; ++i) {
+        if (k <= a[i]) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+int SlowFindLessOrEqual(int *a, int n, int k) {
+    for (auto i = 0; i < n; ++i) {
+        if (k <= a[i]) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+TEST_F(TableBuilderTest, BinarySearchDemo) {
+    int a[] = {2, 5, 8, 11, 14, 17, 20, 23, 26, 29, 32};
+
+    for (int i = 0; i < 33; ++i) {
+        auto fast = FindLessOrEqual(a, sizeof(a)/sizeof(a[0]), i);
+        auto slow = SlowFindLessOrEqual(a, sizeof(a)/sizeof(a[0]), i);
+        EXPECT_EQ(fast, slow) << i;
+    }
+}
+
 } // namespace lsm
 } // namespace yukino
