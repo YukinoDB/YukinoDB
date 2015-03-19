@@ -213,14 +213,22 @@ TEST_F(DBImplTest, DISABLED_LargeWriteForDumping) {
     Options options;
 
     options.create_if_missing = true;
+    options.write_buffer_size = 32 * base::kMB;
+
+    WriteOptions write_options;
 
     std::string value(128, 'f');
     DBImpl db(options, kName);
     auto rs = db.Open(options);
     ASSERT_TRUE(rs.ok()) << rs.ToString();
 
-    for (auto i = 0; i < base::kMB; i++) {
-        rs = db.Put(WriteOptions(), "aaaa", value);
+    for (auto i = 0; i < base::kMB / 1024; i++) {
+        WriteBatch updates;
+
+        for (auto j = 0; j < 1024; ++j) {
+            updates.Put("aaaa", value);
+        }
+        rs = db.Write(write_options, &updates);
         ASSERT_TRUE(rs.ok()) << rs.ToString();
     }
     db.TEST_DumpVersions();

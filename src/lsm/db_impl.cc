@@ -171,17 +171,16 @@ base::Status DBImpl::Write(const WriteOptions& options,
         if (!rs.ok()) {
             return rs;
         }
+    }
+    auto rs = log_->Append(updates->buf());
+    if (!rs.ok()) {
+        return rs;
+    }
 
-        rs = log_->Append(updates->buf());
+    if (options.sync) {
+        rs = log_file_->Sync();
         if (!rs.ok()) {
             return rs;
-        }
-
-        if (options.sync) {
-            rs = log_file_->Sync();
-            if (!rs.ok()) {
-                return rs;
-            }
         }
     }
 

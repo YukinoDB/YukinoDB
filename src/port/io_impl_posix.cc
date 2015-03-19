@@ -39,7 +39,6 @@ public:
         if (written) {
             *written = rv;
         }
-
         active_ += rv;
         return base::Status::OK();
     }
@@ -58,7 +57,14 @@ public:
         return rs;
     }
 
-    virtual base::Status Close() {
+// DO NOT use ftell, it's too slow
+//    virtual size_t active() const override {
+//        auto rv = ftell(file_);
+//        DCHECK_GE(rv, 0);
+//        return rv;
+//    }
+
+    virtual base::Status Close() override {
         if (fclose(DCHECK_NOTNULL(file_)) < 0) {
             return Error();
         }
@@ -66,14 +72,14 @@ public:
         return base::Status::OK();
     }
 
-    virtual base::Status Flush() {
+    virtual base::Status Flush() override {
         if (fflush(file_) < 0) {
             return Error();
         }
         return base::Status::OK();
     }
 
-    virtual base::Status Sync() {
+    virtual base::Status Sync() override {
         auto rs = Flush();
         if (!rs.ok()) {
             return rs;
