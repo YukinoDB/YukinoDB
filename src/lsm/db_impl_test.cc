@@ -11,6 +11,7 @@
 #include "yukino/write_batch.h"
 #include "yukino/read_options.h"
 #include "yukino/write_options.h"
+#include "yukino/iterator.h"
 #include "gtest/gtest.h"
 #include <stdio.h>
 
@@ -29,8 +30,6 @@ public:
     virtual void TearDown() override {
         Env::Default()->DeleteFile(kName, true);
     }
-
-    
 
     constexpr static const auto kName = "demo";
 };
@@ -206,6 +205,34 @@ TEST_F(DBImplTest, DumpThenRecovery) {
         rs = db->Get(ReadOptions(), "ccc", &found);
         ASSERT_TRUE(rs.ok()) << rs.ToString();
         EXPECT_EQ("3", found);
+    }
+}
+
+TEST_F(DBImplTest, DBIterator) {
+    Options options;
+
+    options.create_if_missing = true;
+
+    DBImpl db(options, kName);
+    auto rs = db.Open(options);
+    ASSERT_TRUE(rs.ok()) << rs.ToString();
+
+    WriteOptions write_options;
+    db.Put(write_options, "aaaa", "1");
+    db.Put(write_options, "aaab", "2");
+    db.Put(write_options, "aaac", "3");
+    db.Put(write_options, "aaad", "4");
+    db.Put(write_options, "aaae", "5");
+    db.Put(write_options, "aaaf", "6");
+
+    std::unique_ptr<Iterator> iter(db.NewIterator(ReadOptions()));
+    rs = iter->status();
+    ASSERT_TRUE(rs.ok()) << rs.ToString();
+
+    static const char *values[] = {"1", "2", "3", "4", "5", "6"};
+    auto i = 0;
+    for (iter->SeekToFirst(); iter->Valid(); iter->Next()) {
+        EXPECT_EQ(iter->value().ToString(), values[i++]) << values[i-1];
     }
 }
 
