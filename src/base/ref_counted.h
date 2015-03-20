@@ -38,16 +38,18 @@ class AtomicReferenceCounted : public DisableCopyAssign {
 public:
 
     int AddRef() const {
-        return std::atomic_fetch_add(&counter_, 1);
+        return std::atomic_fetch_add_explicit(&counter_, 1,
+                                              std::memory_order_relaxed);
     }
 
     void Release() const {
-        if (std::atomic_fetch_sub(&counter_, 1) == 1) {
+        if (std::atomic_fetch_sub_explicit(&counter_, 1,
+                                           std::memory_order_relaxed) == 1) {
             Deleter::Delete(static_cast<T*>(const_cast<AtomicReferenceCounted*>(this)));
         }
     }
 
-    int ref_count() const { return counter_.load(); }
+    int ref_count() const { return counter_.load(std::memory_order_relaxed); }
 
 private:
     mutable std::atomic<int> counter_;
