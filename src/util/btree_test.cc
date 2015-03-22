@@ -163,10 +163,46 @@ TEST_F(BTreeTest, TreeSplitLeafPut2) {
     ASSERT_EQ(1, page->size());
     EXPECT_EQ(3, page->key(0));
 
-    page= tree.TEST_GetRoot()->link;
+    page = tree.TEST_GetRoot()->link;
     ASSERT_EQ(2, page->size());
     EXPECT_EQ(4, page->key(0));
     EXPECT_EQ(5, page->key(1));
+}
+
+TEST_F(BTreeTest, TreeSplitNonLeafPut) {
+    IntTree tree(3, int_comparator);
+
+    //int old = 0;
+    //         [2][3]
+    // [0][1][2] [3] [4][5]
+    BatchPut({1, 5, 3, 4, 2, 0}, &tree);
+    int old = 0;
+    //          [3]
+    // [1][2][3]   [4][5][6]
+    ASSERT_FALSE(tree.Put(6, &old));
+    //         [2][3][5]
+    // [0][1][2] [3] [4][5] [6][7]
+    ASSERT_FALSE(tree.Put(7, &old));
+    //         [2][3][5]
+    // [0][1][2] [3] [4][5] [6][7][8]
+    ASSERT_FALSE(tree.Put(8, &old));
+    //              [3]
+    //         [2]         [5][7]
+    // [0][1][2] [3] [4][5] [6][7] [8][9]
+    ASSERT_FALSE(tree.Put(9, &old));
+
+    auto page = tree.TEST_GetRoot();
+    ASSERT_EQ(1, page->size());
+    EXPECT_EQ(3, page->key(0));
+
+    page = page->child(0);
+    ASSERT_EQ(1, page->size());
+    EXPECT_EQ(2, page->key(0));
+
+    page = tree.TEST_GetRoot()->link;
+    ASSERT_EQ(2, page->size());
+    EXPECT_EQ(5, page->key(0));
+    EXPECT_EQ(7, page->key(1));
 }
 
 } // namespace util

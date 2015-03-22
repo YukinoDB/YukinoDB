@@ -1,6 +1,7 @@
 #ifndef YUKINO_UTIL_BTREE_H_
 #define YUKINO_UTIL_BTREE_H_
 
+#include "base/status.h"
 #include "base/slice.h"
 #include "base/base.h"
 #include "glog/logging.h"
@@ -21,6 +22,8 @@ class BTree : public base::DisableCopyAssign {
 public:
     struct Page;
     struct Entry;
+
+    class Iterator;
 
     enum NodeType {
         kLeaf,
@@ -54,6 +57,18 @@ private:
     Page *root_;
 
     Comparator comparator_;
+};
+
+template<class Key, class Comparator>
+class BTree<Key, Comparator>::Iterator {
+public:
+    void SeekToFirst();
+    void SeekToLast();
+    void Seek(const Key &key);
+    void Next();
+    void Prev();
+    const Key &key() const;
+    base::Status status() const;
 };
 
 template<class Key, class Comparator>
@@ -258,7 +273,9 @@ void BTree<Key, Comparator>::SplitNonLeaf(Page *page) {
 
     page->MoveTo(-num_entries, sibling, comparator_);
     sibling->parent.page = parent;
+    sibling->link = page->link;
 
+    page->link = page->back().link;
     auto entry = page->MoveTo(-1, parent, comparator_);
     parent->SetLChild(entry, page);
     parent->SetRChild(entry, sibling);
