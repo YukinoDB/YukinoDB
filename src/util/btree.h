@@ -39,10 +39,13 @@ public:
     bool Put(const Key &key, Key *old);
     bool Delete(const Key &key, Key *old);
 
+    std::tuple<Page*, int> FindLessThan(const Key &key) const;
+    std::tuple<Page*, int> FindGreaterOrEqual(const Key &key) const;
+
     Page *TEST_GetRoot() const { return root_; }
 private:
     Entry *Insert(const Key &key, Page *node, bool *is_new);
-    inline Page *FindLeafPage(const Key &key, Page *node);
+    inline Page *FindLeafPage(const Key &key, Page *node) const;
     int PageMaxSize(Page *node) const { return order_; }
     void SplitLeaf(Page *page);
     void SplitNonLeaf(Page *page);
@@ -57,18 +60,6 @@ private:
     Page *root_;
 
     Comparator comparator_;
-};
-
-template<class Key, class Comparator>
-class BTree<Key, Comparator>::Iterator {
-public:
-    void SeekToFirst();
-    void SeekToLast();
-    void Seek(const Key &key);
-    void Next();
-    void Prev();
-    const Key &key() const;
-    base::Status status() const;
 };
 
 template<class Key, class Comparator>
@@ -117,8 +108,36 @@ struct BTree<Key, Comparator>::Page {
         return nullptr;
     }
 
-    inline Entry *FindGreaterOrEqual(const Key &key, Comparator cmp) {
-        return FindGreaterOrEqual(key, cmp, false, nullptr);
+    inline int FindLessThan(const Key &target, Comparator cmp) const {
+        for (int i = static_cast<int>(size() - 1); i >= 0; i--) {
+            if (cmp(key(i), target) < 0) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    int FindGreaterOrEqual(const Key &target, Comparator cmp) const {
+        int left = 0, right = static_cast<int>(size()) - 1, middle = 0;
+        while (left <= right) {
+            middle = (left + right) / 2;
+
+            auto rv = cmp(target, key(middle));
+            if (rv < 0) {
+                right = middle - 1;
+            } else if (rv > 0) {
+                left = middle + 1;
+            } else {
+                return middle;
+            }
+        }
+
+        for (auto i = middle; i < static_cast<int>(size()); i++) {
+            if (cmp(target, key(i)) < 0) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     inline Entry *Put(const Entry &entry, Comparator cmp) {
@@ -202,6 +221,99 @@ struct BTree<Key, Comparator>::Entry {
     Entry(const Key &k, Page *p) : link(p), key(k) {}
 };
 
+
+template<class Key, class Comparator>
+class BTree<Key, Comparator>::Iterator {
+public:
+    enum Direction {
+        kForward,
+        kReserve,
+    };
+
+    Iterator(BTree<Key, Comparator> *owns)
+        : owns_(owns) {
+    }
+
+    void SeekToFirst() {
+        page_ = GetFirstLeaf();
+        DCHECK_GT(page_->size(), 0);
+        local_ = 0;
+    }
+
+    void SeekToLast() {
+        page_ = GetLastLeaf();
+        DCHECK_GT(page_->size(), 0);
+        local_ = static_cast<int>(page_->size()) - 1;
+    }
+
+    void Seek(const Key &key) {
+        auto rv = owns_->FindGreaterOrEqual(key);
+        page_  = std::get<0>(rv);
+        local_ = std::get<1>(rv);
+        direction_ = kForward;
+    }
+
+    // [0][1][2] [3][4][5]
+    void Next() {
+        DCHECK(Valid());
+
+        if (local_ >= page_->size() - 1) {
+            if (page_) {
+                page_ = page_->link;
+                local_ = 0;
+            }
+        } else {
+            local_++;
+        }
+        direction_ = kForward;
+    }
+
+    // [0][1][2] [3][4][5]
+    void Prev() {
+        DCHECK(Valid());
+
+        if (local_ - 1 < 0) {
+            auto rv = owns_->FindLessThan(page_->key(0));
+            page_ = std::get<0>(rv);
+            local_ = std::get<1>(rv);
+        } else {
+            local_--;
+        }
+        direction_ = kReserve;
+    }
+
+    const Key &key() const {
+        DCHECK(Valid());
+        return page_->key(local_);
+    }
+
+    bool Valid() const {
+        return page_ != nullptr;
+    }
+
+private:
+    typename BTree<Key, Comparator>::Page *GetFirstLeaf() {
+        auto page = owns_->root_;
+        while (!page->is_leaf()) {
+            page = page->child(0);
+        }
+        return page;
+    }
+
+    typename BTree<Key, Comparator>::Page *GetLastLeaf() {
+        auto page = owns_->root_;
+        while (!page->is_leaf()) {
+            page = page->link;
+        }
+        return page;
+    }
+
+    BTree<Key, Comparator> *owns_;
+    typename BTree<Key, Comparator>::Page *page_ = nullptr;
+    int local_ = 0;
+    Direction direction_ = kForward;
+};
+
 template<class Key, class Comparator>
 bool BTree<Key, Comparator>::Put(const Key &key, Key *old) {
     bool is_new = false;
@@ -214,6 +326,45 @@ bool BTree<Key, Comparator>::Put(const Key &key, Key *old) {
         entry->key = key;
     }
     return false;
+}
+
+template<class Key, class Comparator>
+std::tuple<typename BTree<Key, Comparator>::Page*, int>
+BTree<Key, Comparator>::FindLessThan(const Key &key) const {
+    auto page = root_;
+    while (!page->is_leaf()) {
+        auto i = page->FindLessThan(key, comparator_);
+        if (i == static_cast<int>(page->size()) - 1) {
+            auto rv = comparator_(key, page->link->key(0));
+            if (rv <= 0) {
+                page = page->child(i);
+            } else if (rv > 0) {
+                page = page->link;
+            }
+        } else {
+            page = page->child(i < 0 ? 0 : i);
+        }
+    }
+
+    int i = -1;
+    if (page) {
+        i = page->FindLessThan(key, comparator_);
+        if (i < 0) {
+            page = nullptr;
+        }
+    }
+    return std::make_tuple(page, i);
+}
+
+template<class Key, class Comparator>
+std::tuple<typename BTree<Key, Comparator>::Page*, int>
+BTree<Key, Comparator>::FindGreaterOrEqual(const Key &key) const {
+    auto page = FindLeafPage(key, root_);
+    auto i = page->FindGreaterOrEqual(key, comparator_);
+    if (i < 0) {
+        page = nullptr;
+    }
+    return std::make_tuple(page, i);
 }
 
 template<class Key, class Comparator>
@@ -292,10 +443,10 @@ void BTree<Key, Comparator>::SplitNonLeaf(Page *page) {
 template<class Key, class Comparator>
 inline
 typename BTree<Key, Comparator>::Page *
-BTree<Key, Comparator>::FindLeafPage(const Key &key, Page *page) {
+BTree<Key, Comparator>::FindLeafPage(const Key &key, Page *page) const {
     while (!page->is_leaf()) {
-        auto entry = page->FindGreaterOrEqual(key, comparator_);
-        page = page->GetChild(entry);
+        auto i = page->FindGreaterOrEqual(key, comparator_);
+        page = page->GetChild(i < 0 ? nullptr : &page->entries[i]);
     }
     return page;
 }

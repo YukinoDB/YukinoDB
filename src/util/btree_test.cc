@@ -9,6 +9,7 @@
 #include "gtest/gtest.h"
 #include <stdio.h>
 #include <functional>
+#include <vector>
 
 namespace yukino {
 
@@ -203,6 +204,115 @@ TEST_F(BTreeTest, TreeSplitNonLeafPut) {
     ASSERT_EQ(2, page->size());
     EXPECT_EQ(5, page->key(0));
     EXPECT_EQ(7, page->key(1));
+}
+
+TEST_F(BTreeTest, LargeInsert) {
+    IntTree tree(128, int_comparator);
+
+    auto old = 0;
+    auto i = 10000;
+    while (i--) {
+        ASSERT_FALSE(tree.Put(i, &old));
+    }
+}
+
+TEST_F(BTreeTest, FindLessThan) {
+    IntTree tree(3, int_comparator);
+
+    BatchPut({0, 1, 2, 3, 4, 5}, &tree);
+
+    auto rv = tree.FindLessThan(0);
+    EXPECT_EQ(nullptr, std::get<0>(rv));
+    EXPECT_EQ(-1, std::get<1>(rv));
+
+    rv = tree.FindLessThan(1);
+    EXPECT_EQ(0, std::get<0>(rv)->key(std::get<1>(rv)));
+
+    rv = tree.FindLessThan(2);
+    EXPECT_EQ(1, std::get<0>(rv)->key(std::get<1>(rv)));
+
+    rv = tree.FindLessThan(6);
+    EXPECT_EQ(5, std::get<0>(rv)->key(std::get<1>(rv)));
+}
+
+TEST_F(BTreeTest, IteratorNext) {
+    IntTree tree(3, int_comparator);
+
+    // [0][1][2]
+    //-----------
+    //      [1]
+    // [0][1] [2][3]
+    //--------------
+    //        [1][3]
+    // [0][1] [2][3] [4][5]
+    //---------------------
+    //        [1][3][5]
+    // [0][1] [2][3] [4][5] [6][11]
+    //-----------------------------
+    //              [3]
+    //       [1]            [5][11]
+    // [0][1] [2][3] [4][5] [6][11] [13][17]
+    auto numbers = {0, 1, 2, 3, 4, 5, 6, 11, 13, 17};
+    BatchPut(numbers, &tree);
+
+    IntTree::Iterator iter(&tree);
+    iter.SeekToFirst();
+
+    for (auto i : numbers) {
+        ASSERT_TRUE(iter.Valid());
+        EXPECT_EQ(i, iter.key());
+        iter.Next();
+    }
+    ASSERT_FALSE(iter.Valid());
+
+    for (auto i : numbers) {
+        iter.Seek(i);
+        ASSERT_TRUE(iter.Valid());
+        EXPECT_EQ(i, iter.key());
+    }
+
+    iter.Seek(-1);
+    ASSERT_TRUE(iter.Valid());
+    EXPECT_EQ(0, iter.key());
+
+    iter.Seek(18);
+    ASSERT_FALSE(iter.Valid());
+}
+
+TEST_F(BTreeTest, IteratorSeek) {
+    IntTree tree(3, int_comparator);
+
+    // [0][1][2]
+    //-----------
+    //      [1]
+    // [0][1] [2][3]
+    //--------------
+    //        [1][3]
+    // [0][1] [2][3] [4][5]
+    //---------------------
+    //        [1][3][5]
+    // [0][1] [2][3] [4][5] [6][11]
+    //-----------------------------
+    //              [3]
+    //       [1]            [5][11]
+    // [0][1] [2][3] [4][5] [6][11] [13][17]
+    auto numbers = {0, 1, 2, 3, 4, 5, 6, 11, 13, 17};
+    BatchPut(numbers, &tree);
+
+    IntTree::Iterator iter(&tree);
+
+    std::vector<int> rnumber;
+    for (auto i : numbers) {
+        rnumber.insert(rnumber.begin(), i);
+    }
+
+    iter.SeekToLast();
+    for (auto i : rnumber) {
+        ASSERT_TRUE(iter.Valid());
+        EXPECT_EQ(i, iter.key());
+        iter.Prev();
+    }
+    ASSERT_FALSE(iter.Valid());
 }
 
 } // namespace util
