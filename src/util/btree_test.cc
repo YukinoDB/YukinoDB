@@ -315,6 +315,124 @@ TEST_F(BTreeTest, IteratorSeek) {
     ASSERT_FALSE(iter.Valid());
 }
 
+TEST_F(BTreeTest, DeleteFrontLeaf) {
+    IntTree tree(3, int_comparator);
+
+    //---------------------------------------
+    //              [3]
+    //       [1]            [5][11]
+    // [0][1] [2][3] [4][5] [6][11] [13][17]
+    //---------------------------------------
+    BatchPut({0, 1, 2, 3, 4, 5, 6, 11, 13, 17}, &tree);
+
+    int old = 0;
+    ASSERT_TRUE(tree.Delete(0, &old));
+    ASSERT_TRUE(tree.Delete(1, &old));
+
+    //---------------------------------------
+    //         [3][5][11]
+    // [2][3] [4][5] [6][11] [13][17]
+    //---------------------------------------
+
+    auto page = tree.TEST_GetRoot();
+    ASSERT_EQ(3, page->size());
+    EXPECT_EQ(3, page->key(0));
+    EXPECT_EQ(5, page->key(1));
+    EXPECT_EQ(11, page->key(2));
+
+    page = tree.TEST_GetRoot()->child(0);
+    ASSERT_EQ(2, page->size());
+    EXPECT_EQ(2, page->key(0));
+    EXPECT_EQ(3, page->key(1));
+
+    page = tree.TEST_GetRoot()->child(1);
+    ASSERT_EQ(2, page->size());
+    EXPECT_EQ(4, page->key(0));
+    EXPECT_EQ(5, page->key(1));
+
+    page = tree.TEST_GetRoot()->child(2);
+    ASSERT_EQ(2, page->size());
+    EXPECT_EQ(6, page->key(0));
+    EXPECT_EQ(11, page->key(1));
+
+    page = tree.TEST_GetRoot()->link;
+    ASSERT_EQ(2, page->size());
+    EXPECT_EQ(13, page->key(0));
+    EXPECT_EQ(17, page->key(1));
+}
+
+TEST_F(BTreeTest, DeleteMiddleLeaf) {
+    IntTree tree(3, int_comparator);
+
+    //---------------------------------------
+    //              [3]
+    //       [1]            [5][11]
+    // [0][1] [2][3] [4][5] [6][11] [13][17]
+    //---------------------------------------
+    BatchPut({0, 1, 2, 3, 4, 5, 6, 11, 13, 17}, &tree);
+
+    int old = 0;
+    ASSERT_TRUE(tree.Delete(4, &old));
+    ASSERT_TRUE(tree.Delete(5, &old));
+
+    //---------------------------------------
+    //              [3]
+    //       [1]            [11]
+    // [0][1] [2][3]  [6][11] [13][17]
+    //---------------------------------------
+    auto page = tree.TEST_GetRoot();
+    ASSERT_EQ(1, page->size());
+    EXPECT_EQ(3, page->key(0));
+
+    page = tree.TEST_GetRoot()->child(0);
+    ASSERT_EQ(1, page->size());
+    EXPECT_EQ(1, page->key(0));
+
+    page = tree.TEST_GetRoot()->link;
+    ASSERT_EQ(1, page->size());
+    EXPECT_EQ(11, page->key(0));
+
+    page = tree.TEST_GetRoot()->child(0)->child(0);
+    ASSERT_EQ(2, page->size());
+    EXPECT_EQ(0, page->key(0));
+    EXPECT_EQ(1, page->key(1));
+
+    page = tree.TEST_GetRoot()->child(0)->link;
+    ASSERT_EQ(2, page->size());
+    EXPECT_EQ(2, page->key(0));
+    EXPECT_EQ(3, page->key(1));
+
+    page = tree.TEST_GetRoot()->link->child(0);
+    ASSERT_EQ(2, page->size());
+    EXPECT_EQ(6, page->key(0));
+    EXPECT_EQ(11, page->key(1));
+
+    page = tree.TEST_GetRoot()->link->link;
+    ASSERT_EQ(2, page->size());
+    EXPECT_EQ(13, page->key(0));
+    EXPECT_EQ(17, page->key(1));
+
+    page = tree.TEST_FirstPage();
+    ASSERT_EQ(2, page->size());
+    EXPECT_EQ(0, page->key(0));
+    EXPECT_EQ(1, page->key(1));
+
+    page = page->link;
+    ASSERT_EQ(2, page->size());
+    EXPECT_EQ(2, page->key(0));
+    EXPECT_EQ(3, page->key(1));
+
+    page = page->link;
+    ASSERT_EQ(2, page->size());
+    EXPECT_EQ(6, page->key(0));
+    EXPECT_EQ(11, page->key(1));
+
+    page = page->link;
+    ASSERT_EQ(2, page->size());
+    EXPECT_EQ(13, page->key(0));
+    EXPECT_EQ(17, page->key(1));
+}
+
 } // namespace util
 
 } // namespace yukino

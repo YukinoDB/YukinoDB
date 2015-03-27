@@ -36,26 +36,51 @@ public:
         , comparator_(comparator) {
     }
 
-    bool Put(const Key &key, Key *old);
-    bool Delete(const Key &key, Key *old);
+    /**
+     * Put the key into b+tree
+     *
+     * @param key key for putting.
+     * @param old old key if exists.
+     * @return true - key already exists; false - new key.
+     */
+    inline bool Put(const Key &key, Key *old);
+
+    /**
+     * Delete the key from b+tree
+     *
+     * @param key key for deleting.
+     * @param old old key if exists.
+     * @return @return true - key exists; false - not exists.
+     */
+    inline bool Delete(const Key &key, Key *old);
 
     std::tuple<Page*, int> FindLessThan(const Key &key) const;
     std::tuple<Page*, int> FindGreaterOrEqual(const Key &key) const;
 
     Page *TEST_GetRoot() const { return root_; }
+    inline Page *TEST_FirstPage() const;
+
 private:
     Entry *Insert(const Key &key, Page *node, bool *is_new);
+    Entry  Erase(const Key &key, Page *page, bool *is_exists);
+
     inline Page *FindLeafPage(const Key &key, Page *node) const;
     int PageMaxSize(Page *node) const { return order_; }
+
     void SplitLeaf(Page *page);
     void SplitNonLeaf(Page *page);
+
+    void RemoveLeaf(const Key &hint, Page *page);
+    void RemoveNonLeaf(const Entry &hint, Page *page);
+
     inline Page *AllocatePage(int num_entries, NodeType type);
+    inline void FreePage(Page *page);
 
     const int order_;
+
     /**
      * Non-root node entries: [m/2, m-1]
      * split node entries: m/2
-     *
      */
     Page *root_;
 
@@ -83,29 +108,20 @@ struct BTree<Key, Comparator>::Page {
         entries.reserve(cap_entries);
     }
 
-    inline Entry *FindGreaterOrEqual(const Key &key, Comparator cmp,
-                                     bool or_new,
-                                     bool *is_new) {
-        int i = 0;
-        for (i = 0; i < entries.size(); ++i) {
-            auto rv = cmp(key, entries[i].key);
-            if (rv < 0) {
-                if (or_new) {
-                    entries.insert(entries.begin() + i, Entry{key, nullptr});
-                }
-                if (is_new) *is_new = true;
-                return &entries[i];
-            } else if (rv == 0) {
+    Entry *FindOrInsert(const Key &target, Comparator cmp, bool *is_new) {
+        auto i = FindGreaterOrEqual(target, cmp);
+        if (i >= 0) {
+            if (cmp(target, key(i)) == 0) {
                 if (is_new) *is_new = false;
-                return &entries[i];
+            } else {
+                if (is_new) *is_new = true;
+                entries.insert(entries.begin() + i, Entry{target, nullptr});
             }
-        }
-        if (or_new) {
-            if (is_new) *is_new = true;
-            entries.push_back(Entry{key, nullptr});
             return &entries[i];
         }
-        return nullptr;
+        if (is_new) *is_new = true;
+        entries.push_back(Entry {target, nullptr});
+        return &entries.back();
     }
 
     inline int FindLessThan(const Key &target, Comparator cmp) const {
@@ -141,13 +157,40 @@ struct BTree<Key, Comparator>::Page {
     }
 
     inline Entry *Put(const Entry &entry, Comparator cmp) {
-        auto found = FindGreaterOrEqual(entry.key, cmp, true, nullptr);
+        auto found = FindOrInsert(entry.key, cmp, nullptr);
         *found = entry;
         return found;
     }
 
     inline Entry *Put(const Key &key, Page *link, Comparator cmp) {
         return Put(Entry{key, link}, cmp);
+    }
+
+    inline const Entry *Get(const Key &target, Comparator cmp) const {
+        auto i = FindGreaterOrEqual(target, cmp);
+        if (i >= 0) {
+            if (cmp(target, key(i)) == 0) {
+                return &entries[i];
+            }
+        }
+        return nullptr;
+    }
+
+    inline void Delete(const Entry *entry) {
+        DeleteAt(index_of(entry));
+    }
+
+    inline void DeleteAt(int i) {
+        DCHECK_GE(i, 0);
+        DCHECK_LT(i, size());
+
+        if (i > 0) {
+            SetRChild(&entries[i - 1], GetLChild(i));
+        }
+        if (i < size() - 1) {
+            SetLChild(&entries[i + 1], GetRChild(i));
+        }
+        entries.erase(entries.begin() + i);
     }
 
     inline Page *GetChild(Entry *entry) {
@@ -167,6 +210,16 @@ struct BTree<Key, Comparator>::Page {
         }
     }
 
+    inline Page *GetLChild(int i) { return child(i); }
+
+    inline Page *GetRChild(int i) {
+        if (i == size() - 1) {
+            return link;
+        } else {
+            return child(i + 1);
+        }
+    }
+
     /**
      * Move owned entries to target node.
      *
@@ -180,12 +233,18 @@ struct BTree<Key, Comparator>::Page {
         if (num > 0) {
             for (auto i = 0; i < num; ++i) {
                 rv = to->Put(entries[i], cmp);
+                if (rv->link) {
+                    rv->link->parent.page = to;
+                }
             }
             entries.erase(entries.begin(), entries.begin() + num);
         } else if (num < 0) {
             num = -num;
             for (auto i = size() - num; i < size(); ++i) {
                 rv = to->Put(entries[i], cmp);
+                if (rv->link) {
+                    rv->link->parent.page = to;
+                }
             }
             entries.erase(entries.end() - num, entries.end());
         }
@@ -204,7 +263,7 @@ struct BTree<Key, Comparator>::Page {
         return entries.empty() || entries[0].link == nullptr;
     }
 
-    inline int index_of(Entry *entry) {
+    inline int index_of(const Entry *entry) {
         return static_cast<int>(entry - &entries[0]);
     }
 };
@@ -219,6 +278,8 @@ struct BTree<Key, Comparator>::Entry {
     Key key;
 
     Entry(const Key &k, Page *p) : link(p), key(k) {}
+
+    Entry() {}
 };
 
 
@@ -315,7 +376,7 @@ private:
 };
 
 template<class Key, class Comparator>
-bool BTree<Key, Comparator>::Put(const Key &key, Key *old) {
+inline bool BTree<Key, Comparator>::Put(const Key &key, Key *old) {
     bool is_new = false;
     auto entry = Insert(key, root_, &is_new);
     if (!is_new) {
@@ -326,6 +387,16 @@ bool BTree<Key, Comparator>::Put(const Key &key, Key *old) {
         entry->key = key;
     }
     return false;
+}
+
+template<class Key, class Comparator>
+inline bool BTree<Key, Comparator>::Delete(const Key &key, Key *old) {
+    bool is_exists = false;
+    auto entry = Erase(key, root_, &is_exists);
+    if (is_exists) {
+        *old = entry.key;
+    }
+    return is_exists;
 }
 
 template<class Key, class Comparator>
@@ -368,6 +439,17 @@ BTree<Key, Comparator>::FindGreaterOrEqual(const Key &key) const {
 }
 
 template<class Key, class Comparator>
+inline
+typename BTree<Key, Comparator>::Page *
+BTree<Key, Comparator>::TEST_FirstPage() const {
+    auto page = root_;
+    while (!page->is_leaf()) {
+        page = page->child(0);
+    }
+    return page;
+}
+
+template<class Key, class Comparator>
 typename BTree<Key, Comparator>::Entry *
 BTree<Key, Comparator>::Insert(const Key &key, Page *node, bool *is_new) {
     auto page = FindLeafPage(key, node);
@@ -375,7 +457,27 @@ BTree<Key, Comparator>::Insert(const Key &key, Page *node, bool *is_new) {
         SplitLeaf(page);
         return Insert(key, root_, is_new);
     }
-    return page->FindGreaterOrEqual(key, comparator_, true, is_new);
+    return page->FindOrInsert(key, comparator_, is_new);
+}
+
+template<class Key, class Comparator>
+typename BTree<Key, Comparator>::Entry
+BTree<Key, Comparator>::Erase(const Key &key, Page *node, bool *is_exists) {
+    Entry rv {key, nullptr};
+
+    auto page = FindLeafPage(key, node);
+    auto entry = page->Get(key, comparator_);
+    if (entry) {
+        rv = *entry;
+        page->Delete(entry);
+        if (page->size() == 0) {
+            RemoveLeaf(rv.key, page);
+        }
+        *is_exists = true;
+    } else {
+        *is_exists = false;
+    }
+    return rv;
 }
 
 template<class Key, class Comparator>
@@ -422,9 +524,9 @@ void BTree<Key, Comparator>::SplitNonLeaf(Page *page) {
     }
     auto parent = page->parent.page;
 
-    page->MoveTo(-num_entries, sibling, comparator_);
     sibling->parent.page = parent;
     sibling->link = page->link;
+    page->MoveTo(-num_entries, sibling, comparator_);
 
     page->link = page->back().link;
     auto entry = page->MoveTo(-1, parent, comparator_);
@@ -438,6 +540,126 @@ void BTree<Key, Comparator>::SplitNonLeaf(Page *page) {
     page->dirty++;
     parent->dirty++;
     sibling->dirty++;
+}
+
+//         [3][5]
+// [1][2][3] [4][5] [6][7]
+template<class Key, class Comparator>
+void BTree<Key, Comparator>::RemoveLeaf(const Key &hint, Page *page) {
+    DCHECK(page->is_leaf());
+
+    if (page == root_) {
+        return;
+    }
+
+    auto rv = FindLessThan(hint);
+    auto prev = std::get<0>(rv);
+    if (prev) {
+        prev->link = page->link;
+        prev->dirty++;
+    }
+
+    auto parent = DCHECK_NOTNULL(page->parent.page);
+    auto i = parent->FindGreaterOrEqual(hint, comparator_);
+    if (i < 0) {
+        i = static_cast<int>(parent->size()) - 1;
+    }
+
+    Page *link = parent->GetLChild(i) == page ? parent->GetRChild(i) :
+                 parent->GetRChild(i);
+    Entry old{parent->key(i), link};
+
+    if (i == parent->size() - 1) {
+        parent->link = parent->child(i);
+    }
+    parent->DeleteAt(i);
+    parent->dirty++;
+
+    if (parent->size() == 0) {
+        RemoveNonLeaf(old, parent);
+    }
+
+    FreePage(page);
+}
+
+// Remove first:
+//
+//                    [3][7]
+//      [1]             [5]             [9]
+//[0][1]   [2][3] [4][5]   [6][7] [8][9]   [a][b]
+//-----------------------------------------------
+//
+//                   [7]
+//       [3][5]              [9]
+//[0][1] [4][5] [6][7] [8][9]   [a][b]
+//-----------------------------------------------
+//
+// Remove last:
+//
+//                    [3][7]
+//      [1]             [5]             [9]
+//[0][1]   [2][3] [4][5]   [6][7] [8][9]   [a][b]
+//-----------------------------------------------
+//
+//                [3]
+//      [1]              [5][7]
+//[0][1]   [2][3] [4][5] [6][7] [8][9]
+//-----------------------------------------------
+//
+// Remove middle:
+//
+//                    [3][7]
+//      [1]             [5]             [9]
+//[0][1]   [2][3] [4][5]   [6][7] [8][9]   [a][b]
+//-----------------------------------------------
+//                    [3]
+//      [1]                [7][9]
+//[0][1]   [2][3]   [4][5] [8][9] [a][b]
+//-----------------------------------------------
+template<class Key, class Comparator>
+void BTree<Key, Comparator>::RemoveNonLeaf(const Entry &hint, Page *page) {
+    //DCHECK(!page->is_leaf());
+
+    if (page == root_) {
+        return;
+    }
+
+    auto parent = page->parent.page;
+    auto i = parent->FindGreaterOrEqual(hint.key, comparator_);
+    if (i < 0) {
+        i = static_cast<int>(parent->size()) - 1;
+    }
+
+    auto sibling = parent->GetLChild(i) == page ? parent->GetRChild(i) :
+                   parent->GetLChild(i);
+
+    auto put = sibling->Put(parent->key(i), nullptr, comparator_);
+    if (sibling->index_of(put) == sibling->size() - 1) {
+        sibling->SetLChild(put, sibling->link);
+        sibling->SetRChild(put, hint.link);
+    } else {
+        sibling->Put(parent->key(i), hint.link, comparator_);
+    }
+    hint.link->parent.page = sibling;
+
+    Page *link = parent->GetLChild(i) == page ? parent->GetRChild(i) :
+                 parent->GetRChild(i);
+    Entry old{parent->key(i), link};
+
+    parent->DeleteAt(i);
+    sibling->dirty++;
+    parent->dirty++;
+
+    if (parent->size() == 0) {
+        if (parent == root_) {
+            root_ = sibling;
+            FreePage(parent);
+        } else {
+            RemoveNonLeaf(old, parent);
+        }
+    }
+
+    FreePage(page);
 }
 
 template<class Key, class Comparator>
@@ -457,6 +679,12 @@ typename BTree<Key, Comparator>::Page *
 BTree<Key, Comparator>::AllocatePage(int num_entries, NodeType /*type*/) {
     auto page = new Page(0, num_entries);
     return page;
+}
+
+template<class Key, class Comparator>
+inline
+void BTree<Key, Comparator>::FreePage(Page *page) {
+    delete page;
 }
 
 } // namespace util
