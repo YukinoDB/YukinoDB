@@ -3,7 +3,7 @@
 
 #include "lsm/chunk.h"
 #include "lsm/format.h"
-#include "lsm/skiplist.h"
+#include "util/skiplist.h"
 #include "base/ref_counted.h"
 #include "base/status.h"
 #include "base/base.h"
@@ -53,7 +53,7 @@ public:
         return memory_usage_size_.load(std::memory_order_acquire);
     }
 
-    typedef SkipList<InternalKey, KeyComparator> Table;
+    typedef util::SkipList<InternalKey, KeyComparator> Table;
 
 private:
     const InternalKeyComparator comparator_;

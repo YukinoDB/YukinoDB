@@ -1,5 +1,5 @@
-#ifndef YUKINO_LSM_SKIPLIST_H_
-#define YUKINO_LSM_SKIPLIST_H_
+#ifndef YUKINO_UTIL_SKIPLIST_H_
+#define YUKINO_UTIL_SKIPLIST_H_
 
 #include "glog/logging.h"
 #include <stdint.h>
@@ -8,7 +8,7 @@
 
 namespace yukino {
 
-namespace lsm {
+namespace util {
 
 template <class Key, class Comparator>
 class SkipList {
@@ -286,8 +286,8 @@ private:
     Node *node_;
 };
 
-} // namespace lsm
+} // namespace util
 
 } // namespace yukino
 
-#endif // YUKINO_LSM_SKIPLIST_H_
+#endif // YUKINO_UTIL_SKIPLIST_H_

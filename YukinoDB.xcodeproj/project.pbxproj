@@ -156,7 +156,7 @@
 		2304D8DF1AA80815004C8251 /* io_impl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = io_impl.h; path = src/port/io_impl.h; sourceTree = "<group>"; };
 		2304D8E11AA80831004C8251 /* io_impl_posix.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = io_impl_posix.cc; path = src/port/io_impl_posix.cc; sourceTree = "<group>"; };
 		2304D8E31AA8335B004C8251 /* env_impl_test.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = env_impl_test.cc; path = src/port/env_impl_test.cc; sourceTree = SOURCE_ROOT; };
-		23681CA61A9EB2C3002721BE /* skiplist.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = skiplist.h; sourceTree = "<group>"; };
+		2315D61A1AC507080022E1E9 /* skiplist.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = skiplist.h; path = src/util/skiplist.h; sourceTree = "<group>"; };
 		23681CB01A9F04E7002721BE /* skiplist_test.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = skiplist_test.cc; path = src/lsm/skiplist_test.cc; sourceTree = SOURCE_ROOT; };
 		23681CB21A9F486E002721BE /* format.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = format.h; sourceTree = "<group>"; };
 		23681CB41A9F4D16002721BE /* memory_table.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = memory_table.h; sourceTree = "<group>"; };
@@ -262,6 +262,7 @@
 		238716031ABD513900E6334F /* util */ = {
 			isa = PBXGroup;
 			children = (
+				2315D61A1AC507080022E1E9 /* skiplist.h */,
 				2387160D1ABD516600E6334F /* btree.h */,
 			);
 			name = util;
@@ -317,7 +318,6 @@
 				23CD83E01A834F4900D64229 /* builtin.h */,
 				23CD83E11A8350EA00D64229 /* chunk.h */,
 				23CD83EF1A8646CB00D64229 /* chunk.cc */,
-				23681CA61A9EB2C3002721BE /* skiplist.h */,
 				23681CB21A9F486E002721BE /* format.h */,
 				23681CB51A9F5B0F002721BE /* format.cc */,
 				23681CB41A9F4D16002721BE /* memory_table.h */,

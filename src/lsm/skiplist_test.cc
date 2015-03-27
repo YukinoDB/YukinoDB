@@ -5,7 +5,7 @@
 //  Created by Niko Bellic.
 //
 //
-#include "lsm/skiplist.h"
+#include "util/skiplist.h"
 #include "lsm/chunk.h"
 #include "lsm/format.h"
 #include "lsm/builtin.h"
@@ -24,7 +24,7 @@ namespace lsm {
 
 class SkipListTest : public ::testing::Test {
 public:
-    typedef SkipList<int, std::function<int (int, int)>> IntSkipList;
+    typedef util::SkipList<int, std::function<int (int, int)>> IntSkipList;
 
     SkipListTest () {
     }
@@ -127,7 +127,7 @@ TEST_F(SkipListTest, ChunkPut) {
         return BytewiseCompartor()->Compare(a.user_key_slice(), b.user_key_slice());
     };
 
-    typedef SkipList<InternalKey,
+    typedef util::SkipList<InternalKey,
                     std::function<int(const InternalKey &, const InternalKey &)>> Table;
     Table list(comparator);
 
