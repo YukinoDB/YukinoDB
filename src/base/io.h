@@ -56,6 +56,55 @@ protected:
     size_t active_ = 0;
 };
 
+/**
+ * The sequence reader
+ */
+class Reader : public DisableCopyAssign {
+public:
+    Reader();
+    virtual ~Reader();
+
+    Status ReadString(std::string *str) {
+        uint32_t len = 0;
+        auto rs = ReadVarint32(&len, nullptr);
+        if (!rs.ok()) {
+            return rs;
+        }
+        str->resize(len);
+        return Read(&str->at(0), len);
+    }
+
+    Status ReadLargeString(std::string *str) {
+        uint64_t len = 0;
+        auto rs = ReadVarint64(&len, nullptr);
+        if (!rs.ok()) {
+            return rs;
+        }
+        str->resize(len);
+        return Read(&str->at(0), len);
+    }
+
+    Status ReadVarint32(uint32_t *value, size_t *read);
+
+    Status ReadVarint64(uint64_t *value, size_t *read);
+
+    Status ReadFixed16(uint16_t *value) { return Read(value, sizeof(*value)); }
+
+    Status ReadFixed32(uint32_t *value) { return Read(value, sizeof(*value)); }
+
+    Status ReadFixed64(uint64_t *value) { return Read(value, sizeof(*value)); }
+
+    virtual Status Read(void *buf, size_t size) = 0;
+
+    virtual int ReadByte() = 0;
+
+    /**
+     * Ignore count bytes for read.
+     *
+     */
+    virtual Status Ignore(size_t count) = 0;
+};
+
 
 class BufferedWriter : public Writer {
 public:
@@ -140,6 +189,54 @@ private:
     Checksum checker_;
 };
 
+template<class Checksum>
+class VerifiedReader : public Reader {
+public:
+    VerifiedReader(Reader *delegated) : delegated_(delegated) {}
+    virtual ~VerifiedReader() {}
+
+    virtual Status Read(void *buf, size_t size) {
+        auto rs = delegated_->Read(buf, size);
+        if (rs.ok()) {
+            checker_.Update(buf, size);
+        }
+        return rs;
+    }
+
+    virtual int ReadByte() {
+        auto rv = delegated_->ReadByte();
+        if (rv != EOF) {
+            auto byte = static_cast<uint8_t>(rv);
+            checker_.Update(&byte, sizeof(byte));
+        }
+        return rv;
+    }
+
+    virtual Status Ignore(size_t count) {
+        return delegated_->Ignore(count);
+    }
+
+    void Reset() {
+        checker_.Reset();
+    }
+
+    typename Checksum::DigestTy digest() const {
+        return checker_.digest();
+    }
+
+    Writer *delegated() const {
+        return delegated_;
+    }
+
+private:
+    Reader *delegated_;
+    Checksum checker_;
+};
+
+/**
+ * Read from a buffer.
+ *
+ */
 class BufferedReader : public DisableCopyAssign {
 public:
     BufferedReader(const void *buf, size_t len)
@@ -267,16 +364,24 @@ public:
     virtual base::Status Sync() = 0;
 };
 
+/**
+ * Complete file IO. contains: reader, writer, flush ...
+ */
+class FileIO : public AppendFile
+             , public Reader {
+public:
+
+    virtual base::Status Truncate(uint64_t offset) = 0;
+    virtual base::Status Seek(uint64_t offset) = 0;
+};
+
 class FileLock : public DisableCopyAssign {
 public:
     virtual ~FileLock();
 
     virtual base::Status Lock() const = 0;
-
     virtual base::Status Unlock() const = 0;
-
     virtual std::string name() const = 0;
-
     virtual bool locked() const = 0;
 };
 

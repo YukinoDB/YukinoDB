@@ -11,20 +11,21 @@ namespace port {
 
 namespace {
 
-class AppendFileImpl : public base::AppendFile {
+class FileIOImpl : public base::FileIO {
 public:
     static base::Status CreateFile(const char *file_name,
-                                   AppendFileImpl **writer) {
-        FILE *file = fopen(file_name, "a");
+                                   const char *mod,
+                                   FileIOImpl **writer) {
+        FILE *file = fopen(file_name, mod);
         if (!file) {
             return base::Status::IOError(strerror(errno));
         }
-        *writer = new AppendFileImpl(file);
+        *writer = new FileIOImpl(file);
 
         return base::Status::OK();
     }
 
-    virtual ~AppendFileImpl() override {
+    virtual ~FileIOImpl() override {
         if (file_) {
             Close();
         }
@@ -34,7 +35,7 @@ public:
         auto rv = fwrite(data, 1, size, file_);
         auto err = ferror(file_);
         if (err) {
-            return base::Status::IOError(strerror(err));
+            return Error(err);
         }
         if (written) {
             *written = rv;
@@ -64,6 +65,32 @@ public:
 //        return rv;
 //    }
 
+    virtual base::Status Read(void *buf, size_t size) override {
+        auto rv = fread(buf, 1, size, file_);
+        auto err = ferror(file_);
+        if (err) {
+            return Error(err);
+        }
+        active_ += rv;
+        return base::Status::OK();
+    }
+
+    virtual int ReadByte() override {
+        auto rv = fgetc(file_);
+        if (rv != EOF) {
+            active_ += 1;
+        }
+        return rv;
+    }
+
+    virtual base::Status Ignore(size_t count) {
+        if (fseek(file_, count, SEEK_CUR) < 0) {
+            return Error();
+        }
+        active_ += count;
+        return base::Status::OK();
+    }
+
     virtual base::Status Close() override {
         if (fclose(DCHECK_NOTNULL(file_)) < 0) {
             return Error();
@@ -90,11 +117,30 @@ public:
         return base::Status::OK();
     }
 
+    virtual base::Status Truncate(uint64_t offset) {
+        if (ftruncate(fileno(file_), offset) < 0) {
+            return Error();
+        }
+        return base::Status::OK();
+    }
+
+    virtual base::Status Seek(uint64_t offset) {
+        if (fseek(file_, offset, SEEK_SET) < 0) {
+            return Error();
+        }
+        active_ = offset;
+        return base::Status::OK();
+    }
+
 private:
-    AppendFileImpl(FILE *file) : file_(DCHECK_NOTNULL(file)) {}
+    FileIOImpl(FILE *file) : file_(DCHECK_NOTNULL(file)) {}
 
     base::Status Error() {
-        return base::Status::IOError(strerror(errno));
+        return Error(errno);
+    }
+
+    base::Status Error(int err) {
+        return base::Status::IOError(strerror(err));
     }
     
     FILE *file_ = nullptr;
@@ -103,7 +149,7 @@ private:
     static const uint8_t kFillingZero[kFillingSize];
 };
 
-const uint8_t AppendFileImpl::kFillingZero[kFillingSize] = {
+const uint8_t FileIOImpl::kFillingZero[kFillingSize] = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -257,9 +303,21 @@ private:
 } // namespace
 
 base::Status CreateAppendFile(const char *file_name, base::AppendFile **file) {
-    AppendFileImpl *impl = nullptr;
+    FileIOImpl *impl = nullptr;
 
-    auto rs = AppendFileImpl::CreateFile(file_name, &impl);
+    auto rs = FileIOImpl::CreateFile(file_name, "a", &impl);
+    if (!rs.ok()) {
+        return rs;
+    }
+
+    *DCHECK_NOTNULL(file) = impl;
+    return rs;
+}
+
+base::Status CreateFileIO(const char *file_name, base::FileIO **file) {
+    FileIOImpl *impl = nullptr;
+
+    auto rs = FileIOImpl::CreateFile(file_name, "w", &impl);
     if (!rs.ok()) {
         return rs;
     }

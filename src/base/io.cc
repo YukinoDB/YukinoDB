@@ -46,6 +46,50 @@ Status Writer::WriteVarint64(uint64_t value, size_t *written) {
     return Write(buf, len, written);
 }
 
+Reader::Reader() {
+}
+
+Reader::~Reader() {
+}
+
+Status Reader::ReadVarint32(uint32_t *value, size_t *read) {
+    size_t count = 0;
+    int byte = 0;
+    *value = 0;
+    while ((byte = ReadByte()) >= 0x80 && count++ < Varint32::kMaxLen) {
+        (*value) |= (byte & 0x7f);
+        (*value) <<= 7;
+    }
+    if (byte == EOF) {
+        return Status::Corruption("Unexpected EOF");
+    }
+    if (count > Varint32::kMaxLen) {
+        return Status::IOError("Varint32 decoding too large");
+    }
+    (*value) |= byte;
+    if (read) *read = count;
+    return Status::OK();
+}
+
+Status Reader::ReadVarint64(uint64_t *value, size_t *read) {
+    size_t count = 0;
+    int byte = 0;
+    *value = 0;
+    while ((byte = ReadByte()) >= 0x80 && count++ < Varint64::kMaxLen) {
+        (*value) |= (byte & 0x7f);
+        (*value) <<= 7;
+    }
+    if (byte == EOF) {
+        return Status::Corruption("Unexpected EOF");
+    }
+    if (count > Varint64::kMaxLen) {
+        return Status::IOError("Varint64 decoding too large");
+    }
+    (*value) |= byte;
+    if (read) *read = count;
+    return Status::OK();
+}
+
 uint32_t BufferedReader::ReadVarint32() {
     size_t read = 0;
     auto rv = Varint32::Decode(buf_, &read);

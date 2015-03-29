@@ -29,4 +29,13 @@ namespace yukino {
 /*virtual*/ Snapshot::~Snapshot() {
 }
 
+// auto tx = db->BeginTransaction(write_options);
+//     writing...
+// db->Commit(tx);
+// or
+// db->Rollback(tx);
+//
+/*virtual*/ Transaction::~Transaction() {
+}
+
 } // namespace yukino

@@ -8,6 +8,7 @@ namespace yukino {
 namespace base {
 
 class AppendFile;
+class FileIO;
 class MappedMemory;
 class FileLock;
 
@@ -16,6 +17,8 @@ class FileLock;
 namespace port {
 
 base::Status CreateAppendFile(const char *file_name, base::AppendFile **file);
+
+base::Status CreateFileIO(const char *file_name, base::FileIO **file);
 
 base::Status CreateRandomAccessFile(const char *file_name,
                                     base::MappedMemory **file);

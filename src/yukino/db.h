@@ -88,6 +88,12 @@ public:
     virtual ~Snapshot();
 };
 
+class Transaction : public base::DisableCopyAssign {
+public:
+    Transaction() {}
+    virtual ~Transaction();
+};
+
 } //namespace yukino
 
 #endif // YUKINO_API_DB_H_
