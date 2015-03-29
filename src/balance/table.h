@@ -46,11 +46,7 @@ private:
 
         Comparator(InternalKeyComparator c) : comparator(c) {}
 
-        int operator () (const char *a, const char *b) {
-            auto j = InternalKey::Parse(a);
-            auto k = InternalKey::Parse(b);
-            return comparator.Compare(j.key(), k.key());
-        }
+        inline int operator () (const char *a, const char *b);
 
         InternalKeyComparator comparator;
     };
@@ -91,32 +87,13 @@ private:
     base::Status MakeRoomForPage(uint64_t id, uint64_t *addr);
     base::Status FreeRoomForPage(uint64_t id);
 
-    PageTy *AllocatePage(int num_entries);
-    void FreePage(const PageTy *page);
+    inline PageTy *AllocatePage(int num_entries);
+    inline void FreePage(const PageTy *page);
 
-    uint64_t Addr2Index(uint64_t addr) {
-        DCHECK_LT(addr, file_size_);
-        DCHECK_EQ(0, addr % page_size_);
-        return (addr / page_size_) - 1;
-    }
-
-    bool TestUsed(uint64_t addr) {
-        auto i = Addr2Index(addr);
-        DCHECK_LT((i + 31) / 32, bitmap_.size());
-        return bitmap_[(i + 31) / 32] & (1 << (i % 32));
-    }
-
-    void SetUsed(uint64_t addr) {
-        auto i = Addr2Index(addr);
-        DCHECK_LT((i + 31) / 32, bitmap_.size());
-        bitmap_[(i + 31) / 32] |= (1 << (i % 32));
-    }
-
-    void ClearUsed(uint64_t addr) {
-        auto i = Addr2Index(addr);
-        DCHECK_LT((i + 31) / 32, bitmap_.size());
-        bitmap_[(i + 31) / 32] &= ~(1 << (i % 32));
-    }
+    inline uint64_t Addr2Index(uint64_t addr);
+    inline bool TestUsed(uint64_t addr);
+    inline void SetUsed(uint64_t addr);
+    inline void ClearUsed(uint64_t addr);
 
     uint32_t page_size_ = 0;
     uint32_t version_ = 0;

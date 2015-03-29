@@ -1,3 +1,4 @@
+#include "balance/table-inl.h"
 #include "balance/table.h"
 #include "base/io.h"
 #include "base/crc32.h"
@@ -7,31 +8,6 @@
 namespace yukino {
 
 namespace balance {
-
-#define CHECK_OK(expr) rs = (expr); if (!rs.ok()) return rs
-
-
-namespace {
-
-inline uint64_t NowMicroseconds() {
-    using namespace std::chrono;
-
-    auto now = high_resolution_clock::now();
-    return duration_cast<microseconds>(now.time_since_epoch()).count();
-}
-
-inline int FindFirstZero(uint32_t bits) {
-    uint32_t test = 1;
-    for (auto i = 0; i < 32; ++i) {
-        if ((bits & test) == 0) {
-            return i;
-        }
-        test <<= 1;
-    }
-    return -1;
-}
-    
-} // namespace
 
 Table::Table(InternalKeyComparator comparator)
     : comparator_(comparator) {
@@ -121,6 +97,7 @@ bool Table::Put(const base::Slice &key, uint64_t tx_id, uint8_t flag,
     if (old) {
         auto parsed = InternalKey::Parse(old);
         old_value->assign(parsed.value.data(), parsed.value.size());
+        delete[] old;
     }
     return rv;
 }
@@ -431,22 +408,6 @@ Table::ReadTreePage(std::map<uint64_t, PageMetadata> *metadatas,
     CHECK_OK(ReadTreePage(metadatas, parent_id, &meta->page->parent.page));
     CHECK_OK(ReadTreePage(metadatas, link_id, &meta->page->link));
     return rs;
-}
-
-Table::PageTy *Table::AllocatePage(int num_entries) {
-    auto page_id = next_page_id_++;
-
-    auto page = new PageTy(page_id, num_entries);
-    id_map_[page_id] = 0;
-    return page;
-}
-
-void Table::FreePage(const PageTy *page) {
-    if (page) {
-        FreeRoomForPage(page->id);
-        id_map_[page->id] = 0;
-    }
-    delete page;
 }
 
 } // namespace balance

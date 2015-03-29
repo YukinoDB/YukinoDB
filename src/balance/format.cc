@@ -49,6 +49,26 @@ void InternalKeyComparator::FindShortSuccessor(std::string* /*key*/) const {
 }
 
 /*static*/
+ParsedKey InternalKey::Parse(const char *raw) {
+    base::BufferedReader rd(raw, -1);
+    auto size = rd.ReadVarint32();
+    auto key_size = rd.ReadVarint32();
+    DCHECK_LE(key_size, size);
+
+    ParsedKey parsed;
+    parsed.user_key = rd.Read(key_size - sizeof(parsed.tx_id));
+    parsed.tx_id = rd.ReadFixed64();
+    parsed.flag  = parsed.tx_id & 0xff;
+    parsed.tx_id = parsed.tx_id >> 8;
+    DCHECK(parsed.flag == Config::kFlagDeletion ||
+           parsed.flag == Config::kFlagValue);
+
+    auto value_size = size - key_size;
+    parsed.value = rd.Read(value_size);
+    return parsed;
+}
+
+/*static*/
 const char *
 InternalKey::Pack(const base::Slice &key, const base::Slice &value) {
     auto key_len = static_cast<uint32_t>(key.size());
@@ -64,7 +84,7 @@ InternalKey::Pack(const base::Slice &key, const base::Slice &value) {
     w.Write(key.data(), key.size(), nullptr);
     w.Write(value.data(), value.size(), nullptr);
 
-    DCHECK_EQ(size, w.active());
+    DCHECK_EQ(0, w.active());
     return w.Drop();
 }
 
@@ -86,7 +106,7 @@ InternalKey::Pack(const base::Slice &key, uint64_t tx_id, uint8_t flag,
     w.WriteFixed64(tx_id << 8 | flag);
     w.Write(value.data(), value.size(), nullptr);
 
-    DCHECK_EQ(size, w.active());
+    DCHECK_EQ(0, w.active());
     return w.Drop();
 }
 

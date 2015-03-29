@@ -9,13 +9,13 @@ namespace yukino {
 
 namespace balance {
 
-struct Config {
-    static const size_t kBtreePageSize = 4096;
+struct Config final {
+    static const size_t kBtreePageSize      = 4096;
     static const uint32_t kBtreeFileVersion = 0x00010001;
-    static const uint32_t kBtreeFileMagic = 0xa000000b;
-    static const int kBtreeOrder = 128;
+    static const uint32_t kBtreeFileMagic   = 0xa000000b;
+    static const int kBtreeOrder       = 128;
 
-    static const size_t kTxIdSize = sizeof(uint64_t);
+    static const size_t kTxIdSize      = sizeof(uint64_t);
 
     static const uint8_t kPageTypeZero = 0;
     static const uint8_t kPageTypeFull = 1;
@@ -55,24 +55,7 @@ struct ParsedKey {
 class InternalKey {
 public:
 
-    static ParsedKey Parse(const char *raw) {
-        base::BufferedReader rd(raw, -1);
-        auto size = rd.ReadVarint32();
-        auto key_size = rd.ReadVarint32();
-        DCHECK_LE(key_size, size);
-
-        ParsedKey parsed;
-        parsed.user_key = rd.Read(key_size - sizeof(parsed.tx_id));
-        parsed.tx_id = rd.ReadFixed64();
-        parsed.flag  = parsed.tx_id & 0xff;
-        parsed.tx_id = parsed.tx_id >> 8;
-        DCHECK(parsed.flag == Config::kFlagDeletion ||
-               parsed.flag == Config::kFlagValue);
-
-        auto value_size = size - key_size;
-        parsed.value = rd.Read(value_size);
-        return parsed;
-    }
+    static ParsedKey Parse(const char *raw);
 
     static const char *Pack(const base::Slice &key, const base::Slice &value);
 
