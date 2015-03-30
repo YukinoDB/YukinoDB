@@ -63,17 +63,6 @@ inline uint64_t NowMicroseconds() {
     auto now = high_resolution_clock::now();
     return duration_cast<microseconds>(now.time_since_epoch()).count();
 }
-
-inline int FindFirstZero(uint32_t bits) {
-    uint32_t test = 1;
-    for (auto i = 0; i < 32; ++i) {
-        if ((bits & test) == 0) {
-            return i;
-        }
-        test <<= 1;
-    }
-    return -1;
-}
     
 } // namespace
 

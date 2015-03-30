@@ -359,9 +359,9 @@ class AppendFile : public Writer {
 public:
     virtual ~AppendFile();
 
-    virtual base::Status Close() = 0;
-    virtual base::Status Flush() = 0;
-    virtual base::Status Sync() = 0;
+    virtual Status Close() = 0;
+    virtual Status Flush() = 0;
+    virtual Status Sync() = 0;
 };
 
 /**
@@ -371,16 +371,16 @@ class FileIO : public AppendFile
              , public Reader {
 public:
 
-    virtual base::Status Truncate(uint64_t offset) = 0;
-    virtual base::Status Seek(uint64_t offset) = 0;
+    virtual Status Truncate(uint64_t offset) = 0;
+    virtual Status Seek(uint64_t offset) = 0;
 };
 
 class FileLock : public DisableCopyAssign {
 public:
     virtual ~FileLock();
 
-    virtual base::Status Lock() const = 0;
-    virtual base::Status Unlock() const = 0;
+    virtual Status Lock() const = 0;
+    virtual Status Unlock() const = 0;
     virtual std::string name() const = 0;
     virtual bool locked() const = 0;
 };

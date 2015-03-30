@@ -41,7 +41,7 @@ Table::~Table() {
  * | version      | 4 bytes
  * | page-size    | varint32
  * | b+tree order | varint32
- * | ...     |
+ * | ...          |
  */
 base::Status Table::Create(uint32_t page_size, uint32_t version, int order,
                            base::FileIO *file) {
@@ -102,6 +102,35 @@ bool Table::Put(const base::Slice &key, uint64_t tx_id, uint8_t flag,
     return rv;
 }
 
+bool Table::Get(const base::Slice &key, uint64_t tx_id, std::string *value) {
+    TreeTy::Iterator iter(tree_.get());
+
+    std::unique_ptr<const char[]> packed(InternalKey::Pack(key, tx_id,
+                                                           Config::kFlagFind,
+                                                           ""));
+    iter.Seek(packed.get());
+    if (!iter.Valid()) {
+        return false;
+    }
+
+    auto parsed = InternalKey::Parse(iter.key());
+    switch (parsed.flag) {
+        case Config::kFlagDeletion:
+            return false;
+
+        case Config::kFlagValue:
+            if (key.compare(parsed.user_key) != 0) {
+                return false;
+            }
+            value->assign(parsed.value.data(), parsed.value.size());
+            return true;
+
+        default:
+            DCHECK(false) << "Noreached:" << parsed.flag;
+            return false;
+    }
+}
+
 base::Status Table::Flush(bool sync) {
     base::Status rs;
     TreeTy::Travel(tree_->TEST_GetRoot(), [this, &rs](PageTy *page) {
@@ -134,21 +163,20 @@ base::Status Table::Flush(bool sync) {
  *
  */
 base::Status Table::WritePage(const PageTy *page) {
+    // Skip crc32, len and type.
+    // We should write type in the last time.
+    static const uint64_t kFirstSipped = sizeof(uint32_t) * 2 + 1;
+
     // Double writing for page
     base::Status rs;
     uint64_t addr = 0;
 
     CHECK_OK(MakeRoomForPage(page->id, &addr));
     // Ignore crc32, len ...
-    CHECK_OK(file_->Seek(addr + sizeof(uint32_t) * 2));
+    CHECK_OK(file_->Seek(addr + kFirstSipped));
 
     base::VerifiedWriter<base::CRC32> w(file_);
 
-    if (page->is_leaf()) {
-        CHECK_OK(w.WriteByte(Config::kPageTypeFull | Config::kPageLeafFlag));
-    } else {
-        CHECK_OK(w.WriteByte(Config::kPageTypeFull));
-    }
     CHECK_OK(w.WriteFixed64(page->id));           // id
     CHECK_OK(w.WriteFixed64(page->parent.page ? page->parent.page->id : -1));
     CHECK_OK(w.WriteFixed64(NowMicroseconds()));  // ts
@@ -175,10 +203,14 @@ base::Status Table::WritePage(const PageTy *page) {
     }
     size = file_->active() - active;
 
-    // Now fill crc32 and len:
     CHECK_OK(file_->Seek(addr));
     CHECK_OK(file_->WriteFixed32(w.digest()));
     CHECK_OK(file_->WriteFixed32(static_cast<uint32_t>(size)));
+    if (page->is_leaf()) {
+        CHECK_OK(w.WriteByte(Config::kPageTypeFull | Config::kPageLeafFlag));
+    } else {
+        CHECK_OK(w.WriteByte(Config::kPageTypeFull));
+    }
 
     CHECK_OK(FreeRoomForPage(page->id));
     id_map_[page->id] = addr;
@@ -191,7 +223,7 @@ base::Status Table::MakeRoomForPage(uint64_t id, uint64_t *addr) {
 
     uint64_t index = 0;
     for (auto bits : bitmap_) {
-        auto i = FindFirstZero(bits);
+        auto i = base::FindFirstZero32(bits);
         if (i >= 0 && i < 32) {
             //bitmap_[(index + 31) / 32] |= (1 << i);
             index += i;
@@ -257,46 +289,22 @@ base::Status Table::LoadTree() {
     uint64_t root_id = -1;
     std::map<uint64_t, PageMetadata> metadatas;
     for (auto addr = page_size_; addr < file_size_; addr += page_size_) {
-        CHECK_OK(file_->Seek(addr + sizeof(uint32_t) * 2));
-
-        auto type = file_->ReadByte();
-        if (type == EOF) {
-            return base::Status::IOError("Unexpected EOF.");
-        }
-
-        if (type == Config::kPageTypeZero) {
-            // unused page
-            continue;
-        }
-
-        uint64_t id = 0;
-        PageMetadata meta;
-
-        meta.addr = addr;
-        CHECK_OK(file_->ReadFixed64(&id));
-        CHECK_OK(file_->ReadFixed64(&meta.parent));
-        CHECK_OK(file_->ReadFixed64(&meta.ts));
-
-        if (meta.parent == -1) {
-            root_id = id;
-        }
-        auto found = metadatas.find(id);
-        if (found == metadatas.end()) {
-            metadatas.emplace(id, meta);
-        } else {
-            if (meta.ts > found->second.ts) {
-                metadatas.emplace(id, meta);
-            }
-        }
-
-        if (id > next_page_id_) {
-            next_page_id_ = id;
-        }
-        SetUsed(addr);
+        ScanPage(&metadatas, addr);
     }
+    for (const auto &entry : metadatas) {
+        if (entry.second.parent == -1) {
+            if (root_id != -1) {
+                return base::Status::Corruption("Double root pages!");
+            }
+            root_id = entry.first;
+        }
 
+        if (entry.first > next_page_id_) {
+            next_page_id_ = entry.first;
+        }
+    }
     if (root_id == -1) {
-        return base::Status::IOError("Root page not found!");
+        return base::Status::Corruption("No any root page!");
     }
 
     PageTy *root = nullptr;
@@ -322,6 +330,43 @@ base::Status Table::LoadTree() {
     return rs;
 }
 
+base::Status Table::ScanPage(std::map<uint64_t, PageMetadata> *metadatas,
+                             uint64_t addr) {
+    base::Status rs;
+    CHECK_OK(file_->Seek(addr + sizeof(uint32_t) * 2));
+
+    auto type = file_->ReadByte();
+    if (type == EOF) {
+        return base::Status::IOError("Unexpected EOF.");
+    }
+
+    if (type == Config::kPageTypeZero) {
+        // unused page
+        return rs;
+    }
+
+    uint64_t id = 0;
+    PageMetadata meta;
+
+    meta.addr = addr;
+    CHECK_OK(file_->ReadFixed64(&id));
+    CHECK_OK(file_->ReadFixed64(&meta.parent));
+    CHECK_OK(file_->ReadFixed64(&meta.ts));
+
+    auto found = metadatas->find(id);
+    if (found == metadatas->end()) {
+        metadatas->emplace(id, meta);
+    } else {
+        if (meta.ts > found->second.ts) {
+            metadatas->emplace(id, meta);
+            ClearUsed(found->second.addr);
+        }
+    }
+
+    SetUsed(addr);
+    return rs;
+}
+
 base::Status
 Table::ReadTreePage(std::map<uint64_t, PageMetadata> *metadatas,
                     uint64_t id, PageTy **rv) {
@@ -343,18 +388,19 @@ Table::ReadTreePage(std::map<uint64_t, PageMetadata> *metadatas,
     uint32_t checksum = 0;
     CHECK_OK(file_->ReadFixed32(&checksum));
 
-    base::VerifiedReader<base::CRC32> rd(file_);
-
     uint32_t len = 0;
-    CHECK_OK(rd.ReadFixed32(&len));
-    auto byte = rd.ReadByte();
+    CHECK_OK(file_->ReadFixed32(&len));
+    auto byte = file_->ReadByte();
     if (byte == EOF) {
         return base::Status::IOError("Unexpected EOF.");
     }
-    CHECK_OK(rd.Ignore(sizeof(id))); // Ignore id
+
+    uint64_t dummy = 0;
+    base::VerifiedReader<base::CRC32> rd(file_);
+    CHECK_OK(rd.ReadFixed64(&dummy)); // Ignore id
     uint64_t parent_id = 0;
     CHECK_OK(rd.ReadFixed64(&parent_id));
-    CHECK_OK(rd.Ignore(sizeof(uint64_t))); // Ignore ts
+    CHECK_OK(rd.ReadFixed64(&dummy)); // Ignore ts
 
     auto size = file_->active() + len;
 

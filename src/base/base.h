@@ -57,6 +57,32 @@ struct Strings {
 
 #define YK_CLZ32(n) __builtin_clz((uint32_t)( n ))
 
+// Fast find first zero, right to left
+// Base on binary searching
+inline int FindFirstZero32(uint32_t x) {
+    static const int zval[] = {
+        0, /* 0 */ 1, /* 1 */ 0, /* 2 */ 2, /* 3 */
+        0, /* 4 */ 1, /* 5 */ 0, /* 6 */ 3, /* 7 */
+        0, /* 8 */ 1, /* 9 */ 0, /* a */ 2, /* b */
+        0, /* c */ 1, /* d */ 0, /* e */ 4, /* f */
+    };
+
+    int base = 0;
+    if ((x & 0xffff) == 0xffffu) {
+        base += 16;
+        x >>= 16;
+    }
+    if ((x & 0xff) == 0xffu) {
+        base += 8;
+        x >>= 8;
+    }
+    if ((x & 0xf) == 0xfu) {
+        base += 4;
+        x >>= 4;
+    }
+    return base + zval[x & 0xfu];
+}
+
 } // namespace base
 
 } // namespace yukinodb

@@ -23,6 +23,7 @@ struct Config final {
 
     static const uint8_t kFlagValue    = 0;
     static const uint8_t kFlagDeletion = 1;
+    static const uint8_t kFlagFind     = kFlagValue;
 
     Config() = delete;
     ~Config() = delete;

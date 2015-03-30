@@ -37,6 +37,8 @@ public:
              const base::Slice &value,
              std::string *old_value);
 
+    bool Get(const base::Slice &key, uint64_t tx_id, std::string *value);
+
     base::Status Flush(bool sync);
 
     Iterator *CreateIterator() const;
@@ -78,7 +80,8 @@ private:
 
     base::Status InitFile(int order);
     base::Status LoadTree();
-
+    base::Status ScanPage(std::map<uint64_t, PageMetadata> *metadatas,
+                          uint64_t addr);
     base::Status ReadTreePage(std::map<uint64_t, PageMetadata> *metadatas,
                               uint64_t id, PageTy **rv);
 
