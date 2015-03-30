@@ -49,7 +49,7 @@ inline void Table::FreePage(const PageTy *page) {
     delete page;
 }
 
-inline int Table::Comparator::operator()(const char *a, const char *b) {
+inline int Table::Comparator::operator()(const char *a, const char *b) const {
     auto j = InternalKey::Parse(a);
     auto k = InternalKey::Parse(b);
     return comparator.Compare(j.key(), k.key());

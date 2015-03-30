@@ -250,9 +250,10 @@ public:
     BTree(int order, Comparator comparator,
           Allocator allocator = BTreeDefaultAllocator<Key, Comparator>())
         : order_(order)
-        , root_(AllocatePage(0, kLeaf))
         , comparator_(comparator)
         , allocator_(allocator) {
+        // Ensure the allocator initialized.
+        root_ = AllocatePage(0, kLeaf);
     }
 
     /**
@@ -284,12 +285,18 @@ public:
         if (!callback(page)) {
             return false;
         }
-        for (const auto &entry : page->entries) {
-            if (!Travel(entry.link, callback)) {
-                return false;
+        if (!page->is_leaf()) {
+            for (const auto &entry : page->entries) {
+                if (!Travel(entry.link, callback)) {
+                    return false;
+                }
             }
         }
-        return Travel(page->link, callback);
+        if (page->is_leaf()) {
+            return true;
+        } else {
+            return Travel(page->link, callback);
+        }
     }
 
     int order() const { return order_; }

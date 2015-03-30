@@ -3,6 +3,7 @@
 #include "base/io.h"
 #include "base/crc32.h"
 #include "base/varint_encoding.h"
+#include "yukino/iterator.h"
 #include <map>
 
 namespace yukino {
@@ -64,6 +65,7 @@ base::Status Table::Open(base::FileIO *file, size_t file_size) {
 
     base::Status rs;
 
+    CHECK_OK(file_->Seek(0));
     uint32_t magic = 0;
     CHECK_OK(file_->ReadFixed32(&magic));
     if (magic != Config::kBtreeFileMagic)  {
@@ -86,7 +88,7 @@ base::Status Table::Open(base::FileIO *file, size_t file_size) {
     return rs;
 }
 
-bool Table::Put(const base::Slice &key, uint64_t tx_id, uint8_t flag,
+bool Table::Put(const base::Slice &key, uint64_t tx_id, KeyFlag flag,
                 const base::Slice &value,
                 std::string *old_value) {
 
@@ -106,8 +108,7 @@ bool Table::Get(const base::Slice &key, uint64_t tx_id, std::string *value) {
     TreeTy::Iterator iter(tree_.get());
 
     std::unique_ptr<const char[]> packed(InternalKey::Pack(key, tx_id,
-                                                           Config::kFlagFind,
-                                                           ""));
+                                                           kFlagFind, ""));
     iter.Seek(packed.get());
     if (!iter.Valid()) {
         return false;
@@ -115,10 +116,10 @@ bool Table::Get(const base::Slice &key, uint64_t tx_id, std::string *value) {
 
     auto parsed = InternalKey::Parse(iter.key());
     switch (parsed.flag) {
-        case Config::kFlagDeletion:
+        case kFlagDeletion:
             return false;
 
-        case Config::kFlagValue:
+        case kFlagValue:
             if (key.compare(parsed.user_key) != 0) {
                 return false;
             }
@@ -147,6 +148,52 @@ base::Status Table::Flush(bool sync) {
         file_->Sync();
     }
     return rs;
+}
+
+namespace {
+
+class TableIterator : public Iterator {
+public:
+    TableIterator(Table::TreeTy *tree)
+        : iter_(tree) {
+    }
+
+    virtual ~TableIterator() override {}
+    virtual bool Valid() const override { return iter_.Valid(); }
+    virtual void SeekToFirst() override { iter_.SeekToFirst(); }
+    virtual void SeekToLast() override { iter_.SeekToLast(); }
+    virtual void Seek(const base::Slice& target) override {
+        std::unique_ptr<const char[]> packed(InternalKey::Pack(target, ""));
+        iter_.Seek(packed.get());
+    }
+    virtual void Next() override { iter_.Next(); }
+    virtual void Prev() override { iter_.Prev(); }
+    virtual base::Slice key() const override {
+        auto parsed = InternalKey::Parse(iter_.key());
+        return parsed.key();
+    }
+    virtual base::Slice value() const override {
+        auto parsed = InternalKey::Parse(iter_.key());
+        return parsed.value;
+    }
+    virtual base::Status status() const override {
+        return base::Status::OK();
+    }
+
+private:
+    Table::TreeTy::Iterator iter_;
+};
+
+} // namespace
+
+Iterator *Table::CreateIterator() const {
+    auto iter = new TableIterator(tree_.get());
+
+    AddRef();
+    iter->RegisterCleanup([this]() {
+        this->Release();
+    });
+    return iter;
 }
 
 /* Page format:
@@ -453,6 +500,8 @@ Table::ReadTreePage(std::map<uint64_t, PageMetadata> *metadatas,
     }
     CHECK_OK(ReadTreePage(metadatas, parent_id, &meta->page->parent.page));
     CHECK_OK(ReadTreePage(metadatas, link_id, &meta->page->link));
+
+    *rv = meta->page;
     return rs;
 }
 

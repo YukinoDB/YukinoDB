@@ -3,6 +3,7 @@
 
 #include "balance/format.h"
 #include "util/btree.h"
+#include "base/ref_counted.h"
 #include "base/status.h"
 #include "base/base.h"
 #include <vector>
@@ -23,7 +24,7 @@ class Slice;
 
 namespace balance {
 
-class Table {
+class Table : public base::ReferenceCounted<Table> {
 public:
     Table(InternalKeyComparator comparator);
     ~Table();
@@ -33,7 +34,17 @@ public:
 
     base::Status Open(base::FileIO *file, size_t file_size);
 
-    bool Put(const base::Slice &key, uint64_t tx_id, uint8_t flag,
+    /**
+     * Put the key into b+tree table
+     *
+     * @param key key for putting.
+     * @param tx_id transaction id of key.
+     * @param flag key flag.
+     * @param value value for putting.
+     * @param old old value if exists.
+     * @return true - key already exists; false - new key.
+     */
+    bool Put(const base::Slice &key, uint64_t tx_id, KeyFlag flag,
              const base::Slice &value,
              std::string *old_value);
 
@@ -41,14 +52,21 @@ public:
 
     base::Status Flush(bool sync);
 
+    /**
+     * Create internal iterator.
+     *
+     * @return the table's internal iterator.
+     */
     Iterator *CreateIterator() const;
 
-private:
+    //--------------------------------------------------------------------------
+    // Types:
+    //--------------------------------------------------------------------------
     struct Comparator {
 
         Comparator(InternalKeyComparator c) : comparator(c) {}
 
-        inline int operator () (const char *a, const char *b);
+        inline int operator () (const char *a, const char *b) const;
 
         InternalKeyComparator comparator;
     };
@@ -71,6 +89,7 @@ private:
 
     typedef util::BTree<const char*, Comparator, Allocator> TreeTy;
 
+private:
     struct PageMetadata {
         uint64_t parent;
         uint64_t addr;

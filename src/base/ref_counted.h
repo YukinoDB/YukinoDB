@@ -2,6 +2,7 @@
 #define YUKINO_BASE_REF_COUNTED_H_
 
 #include "base/base.h"
+#include "glog/logging.h"
 #include <atomic>
 
 namespace yukino {
@@ -55,6 +56,9 @@ private:
     mutable std::atomic<int> counter_;
 };
 
+/**
+ * Handle for reference counting objects.
+ */
 template <class T>
 class Handle {
 public:
@@ -103,9 +107,9 @@ public:
         return *this;
     }
 
-    T *operator -> () const { return naked_; }
+    T *operator -> () const { return DCHECK_NOTNULL(naked_); }
 
-    T &operator * () const { return *naked_; }
+    T &operator * () const { return *DCHECK_NOTNULL(naked_); }
 
     T *get() const { return naked_; }
 

@@ -21,12 +21,18 @@ struct Config final {
     static const uint8_t kPageTypeFull = 1;
     static const uint8_t kPageLeafFlag = 0x80;
 
-    static const uint8_t kFlagValue    = 0;
-    static const uint8_t kFlagDeletion = 1;
-    static const uint8_t kFlagFind     = kFlagValue;
 
     Config() = delete;
     ~Config() = delete;
+};
+
+/**
+ * The flags for key
+ */
+enum KeyFlag : uint8_t {
+    kFlagValue    = 0,
+    kFlagDeletion = 1,
+    kFlagFind     = kFlagValue,
 };
 
 struct ParsedKey {
@@ -37,7 +43,7 @@ struct ParsedKey {
     uint64_t    tx_id = 0;
 
     // Flag: value or deletion
-    uint8_t     flag  = Config::kFlagValue;
+    uint8_t     flag  = kFlagValue;
 
     base::Slice key() const {
         return base::Slice(user_key.data(), user_key.size() + sizeof(tx_id));

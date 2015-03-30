@@ -45,6 +45,8 @@ public:
     const std::string &buf() const { return buf_; }
     std::string *mutable_buf() { return &buf_; }
     std::string &&move_buf() { return std::move(buf_); }
+
+    void Reset() { Seek(0); buf_.clear(); }
 private:
     std::string buf_;
 };

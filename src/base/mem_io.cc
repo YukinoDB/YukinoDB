@@ -45,6 +45,7 @@ Status StringIO::Read(void *buf, size_t size)  {
         size = buf_.size() - active_;
     }
     ::memcpy(buf, &buf_[active_], size);
+    active_ += size;
     return rs;
 }
 

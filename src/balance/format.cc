@@ -60,8 +60,7 @@ ParsedKey InternalKey::Parse(const char *raw) {
     parsed.tx_id = rd.ReadFixed64();
     parsed.flag  = parsed.tx_id & 0xff;
     parsed.tx_id = parsed.tx_id >> 8;
-    DCHECK(parsed.flag == Config::kFlagDeletion ||
-           parsed.flag == Config::kFlagValue);
+    DCHECK(parsed.flag == kFlagDeletion || parsed.flag == kFlagValue);
 
     auto value_size = size - key_size;
     parsed.value = rd.Read(value_size);

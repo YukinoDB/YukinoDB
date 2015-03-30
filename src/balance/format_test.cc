@@ -27,14 +27,14 @@ public:
 };
 
 TEST_F(FormatTest, InternalKey) {
-    auto k = InternalKey::Pack("aaa", 1, Config::kFlagValue, "bbb");
+    auto k = InternalKey::Pack("aaa", 1, kFlagValue, "bbb");
     ASSERT_NE(nullptr, k);
 
     auto parsed = InternalKey::Parse(k);
     EXPECT_EQ("aaa", parsed.user_key.ToString());
     EXPECT_EQ("bbb", parsed.value.ToString());
     EXPECT_EQ(1, parsed.tx_id);
-    auto flag = Config::kFlagValue;
+    auto flag = kFlagValue;
     EXPECT_EQ(flag, parsed.flag);
 
     delete[] k;
