@@ -59,6 +59,15 @@ public:
      */
     Iterator *CreateIterator() const;
 
+    /**
+     * Approximate the large page ratio: used-blocks / pages.
+     * This means:
+     *     == 1: good page-size setting.
+     *     >  1: page-size too small.
+     * @return used-blocks / pages
+     */
+    inline float ApproximateLargeRatio() const;
+
     //--------------------------------------------------------------------------
     // Testing:
     //--------------------------------------------------------------------------

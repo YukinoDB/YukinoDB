@@ -67,6 +67,8 @@ public:
 
     static ParsedKey Parse(const char *raw);
 
+    static ParsedKey PartialParse(const char *raw, size_t len);
+
     static const char *Pack(const base::Slice &key, const base::Slice &value);
 
     static const char *Pack(const base::Slice &key) { return Pack(key, ""); }

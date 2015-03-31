@@ -57,31 +57,50 @@ struct Strings {
 
 #define YK_CLZ32(n) __builtin_clz((uint32_t)( n ))
 
-// Fast find first zero, right to left
-// Base on binary searching
-inline int FindFirstZero32(uint32_t x) {
-    static const int zval[] = {
-        0, /* 0 */ 1, /* 1 */ 0, /* 2 */ 2, /* 3 */
-        0, /* 4 */ 1, /* 5 */ 0, /* 6 */ 3, /* 7 */
-        0, /* 8 */ 1, /* 9 */ 0, /* a */ 2, /* b */
-        0, /* c */ 1, /* d */ 0, /* e */ 4, /* f */
-    };
+struct Bits {
 
-    int base = 0;
-    if ((x & 0xffff) == 0xffffu) {
-        base += 16;
-        x >>= 16;
+    // Fast find first zero, right to left
+    // Base on binary searching
+    static inline int FindFirstZero32(uint32_t x) {
+        static const int zval[] = {
+            0, /* 0 */ 1, /* 1 */ 0, /* 2 */ 2, /* 3 */
+            0, /* 4 */ 1, /* 5 */ 0, /* 6 */ 3, /* 7 */
+            0, /* 8 */ 1, /* 9 */ 0, /* a */ 2, /* b */
+            0, /* c */ 1, /* d */ 0, /* e */ 4, /* f */
+        };
+
+        int base = 0;
+        if ((x & 0xffff) == 0xffffu) {
+            base += 16;
+            x >>= 16;
+        }
+        if ((x & 0xff) == 0xffu) {
+            base += 8;
+            x >>= 8;
+        }
+        if ((x & 0xf) == 0xfu) {
+            base += 4;
+            x >>= 4;
+        }
+        return base + zval[x & 0xfu];
     }
-    if ((x & 0xff) == 0xffu) {
-        base += 8;
-        x >>= 8;
+
+    /**
+     * Count bit 1 from uint32_t integer.
+     */
+    static inline int CountOne32(uint32_t x) {
+        x = ((0xaaaaaaaa & x) >> 1) + (0x55555555 & x);
+        x = ((0xcccccccc & x) >> 2) + (0x33333333 & x);
+        x = ((0xf0f0f0f0 & x) >> 4) + (0x0f0f0f0f & x);
+        x = ((0xff00ff00 & x) >> 8) + (0x00ff00ff & x);
+        x = ((0xffff0000 & x) >>16) + (0x0000ffff & x);
+        
+        return static_cast<int>(x);
     }
-    if ((x & 0xf) == 0xfu) {
-        base += 4;
-        x >>= 4;
-    }
-    return base + zval[x & 0xfu];
-}
+
+    Bits() = delete;
+    ~Bits() = delete;
+}; // struct Bits
 
 } // namespace base
 

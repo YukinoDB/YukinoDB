@@ -31,8 +31,8 @@ namespace balance {
  * |         | parent| 8 bytes
  * |         | ts    | 8 bytes
  * +---------+-------+---------
- * |         | len   | varint32
- * | payload | link  | varint64
+ * |         | link  | varint64
+ * | payload | num   | varint32
  * |         |entries| ...
  *
  */
@@ -58,7 +58,14 @@ struct PhysicalBlock {
         + 1                 // type
         + sizeof(uint32_t); // next
 
+    static const uint64_t kTypeOffset
+        = sizeof(uint32_t)   // crc32
+        + sizeof(uint16_t);  // len
+
+    static const char kZeroHeader[kHeaderSize];
 };
+
+const char PhysicalBlock::kZeroHeader[PhysicalBlock::kHeaderSize] = {0};
 
 Table::Table(InternalKeyComparator comparator)
     : comparator_(comparator) {
@@ -147,8 +154,10 @@ bool Table::Put(const base::Slice &key, uint64_t tx_id, KeyFlag flag,
     const char *old = nullptr;
     auto rv = tree_->Put(packed, &old);
     if (old) {
-        auto parsed = InternalKey::Parse(old);
-        old_value->assign(parsed.value.data(), parsed.value.size());
+        if (old_value) {
+            auto parsed = InternalKey::Parse(old);
+            old_value->assign(parsed.value.data(), parsed.value.size());
+        }
         delete[] old;
     }
     return rv;
@@ -247,29 +256,24 @@ Iterator *Table::CreateIterator() const {
 }
 
 base::Status Table::WritePage(const PageTy *page) {
-    // Skip crc32, len and type.
-    // We should write type in the last time.
-    static const uint64_t kFirstSipped = sizeof(uint32_t) * 2 + 1;
-
     // Double writing for page
     base::Status rs;
-    uint64_t addr = 0;
 
-    CHECK_OK(MakeRoomForPage(&addr));
-    // Ignore crc32, len ...
-    CHECK_OK(file_->Seek(addr + kFirstSipped));
-
-    base::VerifiedWriter<base::CRC32> w(file_);
-
+    base::BufferedWriter w;
+    // type
+    if (page->is_leaf()) {
+        CHECK_OK(w.WriteByte(Config::kPageTypeFull | Config::kPageLeafFlag));
+    } else {
+        CHECK_OK(w.WriteByte(Config::kPageTypeFull));
+    }
     CHECK_OK(w.WriteFixed64(page->id));           // id
+    // parent
     CHECK_OK(w.WriteFixed64(page->parent.page ? page->parent.page->id : -1));
     CHECK_OK(w.WriteFixed64(NowMicroseconds()));  // ts
 
-    // Record payload size:
-    size_t active = file_->active();
-    size_t size = 0;
-
+    // link and entries
     CHECK_OK(w.WriteVarint64(page->link ? page->link->id : -1, nullptr));
+    CHECK_OK(w.WriteVarint32(static_cast<uint32_t>(page->size()), nullptr));
     if (page->is_leaf()) {
         for (const auto &entry : page->entries) {
             auto parsed = InternalKey::Parse(entry.key);
@@ -281,24 +285,14 @@ base::Status Table::WritePage(const PageTy *page) {
         for (const auto &entry : page->entries) {
             auto parsed = InternalKey::Parse(entry.key);
 
-            CHECK_OK(w.WriteVarint64(entry.link->id, &size));
-            CHECK_OK(w.WriteString(parsed.key(), &size));
+            CHECK_OK(w.WriteVarint64(entry.link->id, nullptr));
+            CHECK_OK(w.WriteString(parsed.key(), nullptr));
         }
     }
-    size = file_->active() - active;
 
-    CHECK_OK(file_->Seek(addr));
-    CHECK_OK(file_->WriteFixed32(w.digest()));
-    CHECK_OK(file_->WriteFixed32(static_cast<uint32_t>(size)));
-    if (page->is_leaf()) {
-        CHECK_OK(w.WriteByte(Config::kPageTypeFull | Config::kPageLeafFlag));
-    } else {
-        CHECK_OK(w.WriteByte(Config::kPageTypeFull));
-    }
-
-    CHECK_OK(FreeRoomForPage(page->id));
+    uint64_t addr = 0;
+    CHECK_OK(WriteChunk(w.buf(), w.len(), &addr));
     id_map_[page->id] = addr;
-    SetUsed(addr);
     return rs;
 }
 
@@ -311,6 +305,7 @@ base::Status Table::WriteChunk(const char *buf, size_t len, uint64_t *addr) {
     std::vector<uint64_t> blocks(num_blocks);
     for (auto i = 0; i < num_blocks; ++i) {
         CHECK_OK(MakeRoomForPage(&blocks[i]));
+        SetUsed(blocks[i]);
     }
     blocks.push_back(0);
 
@@ -337,7 +332,8 @@ base::Status Table::WriteChunk(const char *buf, size_t len, uint64_t *addr) {
 
         DCHECK_LT(len, Config::kMaxPageSize);
         CHECK_OK(WriteBlock(buf + offset, len, type, blocks[i], blocks[i + 1]));
-        left -= len;
+        left   -= len;
+        offset += len;
     }
     DCHECK_EQ(0, left);
 
@@ -373,6 +369,7 @@ base::Status Table::ReadChunk(uint64_t addr, std::string *buf) {
     base::Status rs;
 
     uint8_t type = 0;
+    buf->clear();
     do {
         CHECK_OK(file_->Seek(addr));
 
@@ -406,7 +403,7 @@ base::Status Table::MakeRoomForPage(uint64_t *addr) {
 
     uint64_t index = 0;
     for (auto bits : bitmap_) {
-        auto i = base::FindFirstZero32(bits);
+        auto i = base::Bits::FindFirstZero32(bits);
         if (i >= 0 && i < 32) {
             //bitmap_[(index + 31) / 32] |= (1 << i);
             index += i;
@@ -438,13 +435,32 @@ base::Status Table::FreeRoomForPage(uint64_t id) {
         return rs;
     }
 
-    DCHECK(TestUsed(addr));
-    ClearUsed(addr);
+    static_assert(sizeof(PhysicalBlock::Type) == 1,
+                  "PhysicalBlock::Type too big");
 
-    CHECK_OK(file_->Seek(addr));
-    CHECK_OK(file_->WriteFixed32(0)); // crc32
-    CHECK_OK(file_->WriteFixed32(0)); // len
-    CHECK_OK(file_->WriteByte(Config::kPageTypeZero)); // type
+    std::vector<uint64_t> will_free;
+    PhysicalBlock::Type type = PhysicalBlock::kZeroType;
+    do {
+        will_free.push_back(addr);
+
+        CHECK_OK(file_->Seek(addr + PhysicalBlock::kTypeOffset));
+        CHECK_OK(file_->Read(&type, sizeof(type)));
+
+        uint32_t np = 0;
+        CHECK_OK(file_->ReadFixed32(&np));
+        if (np != 0) {
+            addr = np * page_size_;
+        }
+    } while (type == PhysicalBlock::kFirstType ||
+             type == PhysicalBlock::kMiddleType);
+
+    for (auto addr : will_free) {
+        CHECK_OK(file_->Seek(addr));
+        CHECK_OK(file_->Write(PhysicalBlock::kZeroHeader,
+                              PhysicalBlock::kHeaderSize, nullptr));
+        DCHECK(TestUsed(addr));
+        ClearUsed(addr);
+    }
     return rs;
 }
 
@@ -516,22 +532,27 @@ base::Status Table::LoadTree() {
 base::Status Table::ScanPage(std::map<uint64_t, PageMetadata> *metadatas,
                              uint64_t addr) {
     base::Status rs;
-    CHECK_OK(file_->Seek(addr + sizeof(uint32_t) * 2));
+    CHECK_OK(file_->Seek(addr + PhysicalBlock::kTypeOffset));
 
-    auto type = file_->ReadByte();
-    if (type == EOF) {
-        return base::Status::IOError("Unexpected EOF.");
-    }
-
-    if (type == Config::kPageTypeZero) {
-        // unused page
+    PhysicalBlock::Type type = PhysicalBlock::kZeroType;
+    CHECK_OK(file_->Read(&type, sizeof(type)));
+    if (type == PhysicalBlock::kZeroType ||
+        type == PhysicalBlock::kLastType ||
+        type == PhysicalBlock::kMiddleType) {
+        // unused or last or middle page, ignore it.
         return rs;
     }
 
+    // Go to payload:
+    CHECK_OK(file_->Seek(addr + PhysicalBlock::kHeaderSize));
+
     uint64_t id = 0;
+    uint8_t  page_type = 0;
     PageMetadata meta;
 
     meta.addr = addr;
+    CHECK_OK(file_->Read(&page_type, sizeof(page_type)));
+    DCHECK_NE(Config::kPageTypeZero, page_type);
     CHECK_OK(file_->ReadFixed64(&id));
     CHECK_OK(file_->ReadFixed64(&meta.parent));
     CHECK_OK(file_->ReadFixed64(&meta.ts));
@@ -566,53 +587,40 @@ Table::ReadTreePage(std::map<uint64_t, PageMetadata> *metadatas,
         return rs;
     }
 
-    CHECK_OK(file_->Seek(meta->addr));
+    std::string buf;
+    CHECK_OK(ReadChunk(meta->addr, &buf));
 
-    uint32_t checksum = 0;
-    CHECK_OK(file_->ReadFixed32(&checksum));
+    base::BufferedReader rd(buf.data(), buf.size());
 
-    uint32_t len = 0;
-    CHECK_OK(file_->ReadFixed32(&len));
-    auto byte = file_->ReadByte();
-    if (byte == EOF) {
-        return base::Status::IOError("Unexpected EOF.");
-    }
-
-    uint64_t dummy = 0;
-    base::VerifiedReader<base::CRC32> rd(file_);
-    CHECK_OK(rd.ReadFixed64(&dummy)); // Ignore id
-    uint64_t parent_id = 0;
-    CHECK_OK(rd.ReadFixed64(&parent_id));
-    CHECK_OK(rd.ReadFixed64(&dummy)); // Ignore ts
-
-    auto size = file_->active() + len;
+    uint8_t  type      = rd.ReadByte(); // type;
+    uint64_t dummy     = rd.ReadFixed64(); // Ignore id
+    uint64_t parent_id = rd.ReadFixed64(); // parent
+    dummy = rd.ReadFixed64(); //
 
     //==========================================================================
     // Payload:
     //==========================================================================
-    uint64_t link_id = 0;
-    CHECK_OK(rd.ReadVarint64(&link_id, nullptr));
+    uint64_t link_id     = rd.ReadVarint64();
+    uint32_t num_entries = rd.ReadVarint32();
 
     meta->page = new PageTy(id, 16);
 
-    std::string key, value;
     std::vector<uint64_t> children_id;
-    if (static_cast<uint8_t>(byte) & Config::kPageLeafFlag) {
-        while (file_->active() < size) {
-            CHECK_OK(rd.ReadString(&key));
-            CHECK_OK(rd.ReadString(&value));
+    if (type & Config::kPageLeafFlag) {
+        for (auto i = 0; i < num_entries; ++i) {
+            auto key = rd.ReadString();
+            auto value = rd.ReadString();
 
             auto k = InternalKey::Pack(key, value);
             meta->page->entries.push_back(EntryTy{k, nullptr});
         }
     } else {
-        while (file_->active() < size) {
-            uint64_t child_id = 0;
-            CHECK_OK(rd.ReadVarint64(&child_id, nullptr));
+        for (auto i = 0; i < num_entries; ++i) {
+            uint64_t child_id = rd.ReadVarint64();
             DCHECK_NE(id, child_id);
             children_id.push_back(child_id);
 
-            CHECK_OK(rd.ReadString(&key));
+            auto key = rd.ReadString();
 
             EntryTy entry;
             entry.key = InternalKey::Pack(key);
@@ -621,14 +629,10 @@ Table::ReadTreePage(std::map<uint64_t, PageMetadata> *metadatas,
         DCHECK_EQ(children_id.size(), meta->page->size());
     }
 
-    if (checksum != rd.digest()) {
-        return base::Status::IOError("CRC32 verify fail.");
-    }
-
     //==========================================================================
     // Links:
     //==========================================================================
-    if ((static_cast<uint8_t>(byte) & Config::kPageLeafFlag) == 0) {
+    if ((type & Config::kPageLeafFlag) == 0) {
         for (auto i = 0; i < children_id.size(); ++i) {
             CHECK_OK(ReadTreePage(metadatas, children_id[i],
                                   &meta->page->entries[i].link));

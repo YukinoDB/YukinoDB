@@ -112,14 +112,93 @@ TEST_F(BtreeTableTest, Reopen) {
     EXPECT_EQ("3", iter->value());
 }
 
+TEST_F(BtreeTableTest, MutilPut) {
+    const char *keys[] = {
+        "a",
+        "aaa",
+        "aaaa",
+        "b",
+        "bb",
+        "bbb",
+        "bbbb",
+    };
+
+    auto rs = table_->Create(kPageSize, Config::kBtreeFileVersion, 3, &io_);
+    ASSERT_TRUE(rs.ok());
+
+    std::string dummy;
+    uint64_t tx_id = 0;
+    for (auto key : keys) {
+        ASSERT_FALSE(table_->Put(key, tx_id++, kFlagValue, "1", &dummy));
+    }
+
+    std::unique_ptr<Iterator> iter(table_->CreateIterator());
+    iter->SeekToFirst();
+    tx_id = 0;
+    for (auto key : keys) {
+        ASSERT_TRUE(iter->Valid());
+
+        auto parsed = InternalKey::PartialParse(iter->key().data(),
+                                                iter->key().size());
+        EXPECT_EQ(key, parsed.user_key.ToString());
+        EXPECT_EQ(kFlagValue, parsed.flag);
+        EXPECT_EQ(tx_id++, parsed.tx_id);
+        EXPECT_EQ("1", iter->value().ToString());
+
+        iter->Next();
+    }
+}
+
+TEST_F(BtreeTableTest, MutilReopen) {
+    const char *keys[] = {
+        "a",
+        "aaa",
+        "aaaa",
+        "b",
+        "bb",
+        "bbb",
+        "bbbb",
+    };
+
+    auto rs = table_->Create(kPageSize, Config::kBtreeFileVersion, 3, &io_);
+    ASSERT_TRUE(rs.ok());
+
+    uint64_t tx_id = 0;
+    for (auto key : keys) {
+        ASSERT_FALSE(table_->Put(key, tx_id++, kFlagValue, "2", nullptr));
+    }
+
+    InternalKeyComparator comparator(BytewiseCompartor());
+    table_ = new Table(comparator);
+
+    rs = table_->Open(&io_, io_.buf().size());
+    ASSERT_TRUE(rs.ok()) << rs.ToString();
+
+    std::unique_ptr<Iterator> iter(table_->CreateIterator());
+    iter->SeekToFirst();
+    tx_id = 0;
+    for (auto key : keys) {
+        ASSERT_TRUE(iter->Valid());
+
+        auto parsed = InternalKey::PartialParse(iter->key().data(),
+                                                iter->key().size());
+        EXPECT_EQ(key, parsed.user_key.ToString());
+        EXPECT_EQ(kFlagValue, parsed.flag);
+        EXPECT_EQ(tx_id++, parsed.tx_id);
+        EXPECT_EQ("2", iter->value().ToString());
+
+        iter->Next();
+    }
+}
+
 TEST_F(BtreeTableTest, ChunkRW) {
     auto rs = table_->Create(kPageSize, Config::kBtreeFileVersion, 3, &io_);
     ASSERT_TRUE(rs.ok());
 
-
+    std::string buf;
+    uint64_t addr = 0;
     {
-        std::string dummy(2, '1'), buf;
-        uint64_t addr = 0;
+        std::string dummy(2, '1');
         rs = table_->TEST_WriteChunk(dummy.data(), dummy.size(), &addr);
         ASSERT_TRUE(rs.ok()) << rs.ToString();
 
@@ -127,8 +206,31 @@ TEST_F(BtreeTableTest, ChunkRW) {
         ASSERT_TRUE(rs.ok()) << rs.ToString();
         EXPECT_EQ(dummy, buf);
     } {
-        std::string dummy(kPageSize - 11, '1'), buf;
-        uint64_t addr = 0;
+        std::string dummy(kPageSize - 11, '2');
+        rs = table_->TEST_WriteChunk(dummy.data(), dummy.size(), &addr);
+        ASSERT_TRUE(rs.ok()) << rs.ToString();
+
+        rs = table_->TEST_ReadChunk(addr, &buf);
+        ASSERT_TRUE(rs.ok()) << rs.ToString();
+        EXPECT_EQ(dummy, buf);
+    } {
+        std::string dummy((kPageSize - 11) * 2, '3');
+        rs = table_->TEST_WriteChunk(dummy.data(), dummy.size(), &addr);
+        ASSERT_TRUE(rs.ok()) << rs.ToString();
+
+        rs = table_->TEST_ReadChunk(addr, &buf);
+        ASSERT_TRUE(rs.ok()) << rs.ToString();
+        EXPECT_EQ(dummy, buf);
+    } {
+        std::string dummy((kPageSize - 11) * 2 + 2, '4');
+        rs = table_->TEST_WriteChunk(dummy.data(), dummy.size(), &addr);
+        ASSERT_TRUE(rs.ok()) << rs.ToString();
+
+        rs = table_->TEST_ReadChunk(addr, &buf);
+        ASSERT_TRUE(rs.ok()) << rs.ToString();
+        EXPECT_EQ(dummy, buf);
+    } {
+        std::string dummy((kPageSize - 11) * 3, '5');
         rs = table_->TEST_WriteChunk(dummy.data(), dummy.size(), &addr);
         ASSERT_TRUE(rs.ok()) << rs.ToString();
 
@@ -136,6 +238,22 @@ TEST_F(BtreeTableTest, ChunkRW) {
         ASSERT_TRUE(rs.ok()) << rs.ToString();
         EXPECT_EQ(dummy, buf);
     }
+}
+
+TEST_F(BtreeTableTest, DeletionHidden) {
+    auto rs = table_->Create(kPageSize, Config::kBtreeFileVersion, 3, &io_);
+    ASSERT_TRUE(rs.ok());
+
+    ASSERT_FALSE(table_->Put("aaa", 0, kFlagValue, "1", nullptr));
+    ASSERT_FALSE(table_->Put("aaa", 1, kFlagValue, "2", nullptr));
+    ASSERT_FALSE(table_->Put("aaa", 2, kFlagDeletion, "", nullptr));
+
+    std::string dummy;
+    ASSERT_FALSE(table_->Get("aaa", 99, &dummy));
+    ASSERT_TRUE(table_->Get("aaa", 1, &dummy));
+    EXPECT_EQ("2", dummy);
+    ASSERT_TRUE(table_->Get("aaa", 0, &dummy));
+    EXPECT_EQ("1", dummy);
 }
 
 } // namespace balance

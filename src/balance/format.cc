@@ -68,6 +68,18 @@ ParsedKey InternalKey::Parse(const char *raw) {
 }
 
 /*static*/
+ParsedKey InternalKey::PartialParse(const char *raw, size_t len) {
+    ParsedKey parsed;
+
+    parsed.user_key = base::Slice(raw, len - sizeof(parsed.tx_id));
+    parsed.tx_id    = *reinterpret_cast<const uint64_t*>(raw + parsed.user_key.size());
+    parsed.flag     = parsed.tx_id & 0xff;
+    parsed.tx_id    = parsed.tx_id >> 8;
+
+    return parsed;
+}
+
+/*static*/
 const char *
 InternalKey::Pack(const base::Slice &key, const base::Slice &value) {
     auto key_len = static_cast<uint32_t>(key.size());
