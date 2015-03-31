@@ -10,6 +10,56 @@ namespace yukino {
 
 namespace balance {
 
+/* Physical Layout:
+ * 
+ * Block:
+ * +---------+-------+
+ * |         | crc32 | 4 bytes
+ * |         +-------+
+ * | header  | len   | 2 bytes
+ * |         +-------+
+ * |         | type  | 1 bytes
+ * |         +-------+
+ * |         | next  | 4 bytes | 0 or null
+ * +---------+-------+
+ * | payload | data  | len bytes
+ * +---------+-------+
+ *
+ * Page Layout:
+ * |         | type  | 1 byte
+ * |  header | id    | 8 bytes
+ * |         | parent| 8 bytes
+ * |         | ts    | 8 bytes
+ * +---------+-------+---------
+ * |         | len   | varint32
+ * | payload | link  | varint64
+ * |         |entries| ...
+ *
+ */
+
+struct PhysicalBlock {
+
+    enum Type : uint8_t {
+        // Zero is reserved for preallocated files
+        kZeroType = 0,
+
+        kFullType = 1,
+
+        // For fragments
+        kFirstType  = 2,
+        kMiddleType = 3,
+        kLastType   = 4
+    };
+
+    // 11
+    static const size_t kHeaderSize
+        = sizeof(uint32_t)  // crc32
+        + sizeof(uint16_t)  // len
+        + 1                 // type
+        + sizeof(uint32_t); // next
+
+};
+
 Table::Table(InternalKeyComparator comparator)
     : comparator_(comparator) {
 }
@@ -135,7 +185,7 @@ bool Table::Get(const base::Slice &key, uint64_t tx_id, std::string *value) {
 base::Status Table::Flush(bool sync) {
     base::Status rs;
     TreeTy::Travel(tree_->TEST_GetRoot(), [this, &rs](PageTy *page) {
-        if (page->dirty) {
+        if (page->dirty && page->size() > 0) {
             rs = WritePage(page);
             if (rs.ok()) {
                 page->dirty = 0;
@@ -196,19 +246,6 @@ Iterator *Table::CreateIterator() const {
     return iter;
 }
 
-/* Page format:
- * 
- * |         | crc32 | fixed32
- * | header  | len   | fixed32
- * |         | type  | 1 byte
- * |         | id    | 8 bytes
- * |         | parent| 8 bytes
- * |         | ts    | 8 bytes
- * +---------+-------+---------
- * | payload | link  | varint64
- * |         |entries| ...
- *
- */
 base::Status Table::WritePage(const PageTy *page) {
     // Skip crc32, len and type.
     // We should write type in the last time.
@@ -218,7 +255,7 @@ base::Status Table::WritePage(const PageTy *page) {
     base::Status rs;
     uint64_t addr = 0;
 
-    CHECK_OK(MakeRoomForPage(page->id, &addr));
+    CHECK_OK(MakeRoomForPage(&addr));
     // Ignore crc32, len ...
     CHECK_OK(file_->Seek(addr + kFirstSipped));
 
@@ -265,7 +302,106 @@ base::Status Table::WritePage(const PageTy *page) {
     return rs;
 }
 
-base::Status Table::MakeRoomForPage(uint64_t id, uint64_t *addr) {
+base::Status Table::WriteChunk(const char *buf, size_t len, uint64_t *addr) {
+    base::Status rs;
+
+    DCHECK_LT(PhysicalBlock::kHeaderSize, page_size_);
+    const auto block_payload_size = page_size_ - PhysicalBlock::kHeaderSize;
+    const auto num_blocks = (len + block_payload_size - 1) / block_payload_size;
+    std::vector<uint64_t> blocks(num_blocks);
+    for (auto i = 0; i < num_blocks; ++i) {
+        CHECK_OK(MakeRoomForPage(&blocks[i]));
+    }
+    blocks.push_back(0);
+
+    auto left = len;
+    size_t offset = 0;
+    auto type = PhysicalBlock::kZeroType;
+    for (auto i = 0; i < num_blocks; ++i) {
+
+        if (left > block_payload_size) {
+            len = block_payload_size;
+        } else {
+            len = left;
+        }
+
+        if (num_blocks == 1) {
+            type = PhysicalBlock::kFullType;
+        } else if (num_blocks > 1 && i == 0) {
+            type = PhysicalBlock::kFirstType;
+        } else if (num_blocks > 1 && i == num_blocks - 1) {
+            type = PhysicalBlock::kLastType;
+        } else {
+            type = PhysicalBlock::kMiddleType;
+        }
+
+        DCHECK_LT(len, Config::kMaxPageSize);
+        CHECK_OK(WriteBlock(buf + offset, len, type, blocks[i], blocks[i + 1]));
+        left -= len;
+    }
+    DCHECK_EQ(0, left);
+
+    *addr = blocks[0];
+    return rs;
+}
+
+base::Status Table::WriteBlock(const char *buf, uint16_t len, uint8_t type,
+                               uint64_t addr, uint64_t next) {
+    DCHECK_EQ(0, next % page_size_);
+    auto np = static_cast<uint32_t>(next) / page_size_;
+
+    base::Status rs;
+    base::CRC32 crc;
+
+    crc.Update(&len, sizeof(len));
+    crc.Update(&type, sizeof(type));
+    crc.Update(&np, sizeof(np));
+
+    crc.Update(buf, len);
+
+    CHECK_OK(file_->Seek(addr));
+    CHECK_OK(file_->WriteFixed32(crc.digest())); // crc32
+    CHECK_OK(file_->WriteFixed16(len));          // len
+    CHECK_OK(file_->WriteByte(type));            // type
+    CHECK_OK(file_->WriteFixed32(np));           // next
+
+    CHECK_OK(file_->Write(buf, len, nullptr));   // payload data
+    return rs;
+}
+
+base::Status Table::ReadChunk(uint64_t addr, std::string *buf) {
+    base::Status rs;
+
+    uint8_t type = 0;
+    do {
+        CHECK_OK(file_->Seek(addr));
+
+        uint32_t checksum = 0;
+        CHECK_OK(file_->ReadFixed32(&checksum));
+
+        base::VerifiedReader<base::CRC32> rd(file_);
+        uint16_t len = 0;
+        CHECK_OK(rd.ReadFixed16(&len));
+
+        CHECK_OK(rd.Read(&type, 1));
+        uint32_t np = 0;
+        CHECK_OK(rd.ReadFixed32(&np));
+        addr = np * page_size_; DCHECK_LT(addr, file_size_);
+
+        auto begin = buf->size();
+        buf->resize(buf->size() + len);
+        CHECK_OK(rd.Read(&(*buf)[begin], len));
+
+        if (checksum != rd.digest()) {
+            rs = base::Status::IOError("CRC32 verify fail!");
+            break;
+        }
+    } while (type == PhysicalBlock::kFirstType ||
+             type == PhysicalBlock::kMiddleType);
+    return rs;
+}
+
+base::Status Table::MakeRoomForPage(uint64_t *addr) {
     base::Status rs;
 
     uint64_t index = 0;

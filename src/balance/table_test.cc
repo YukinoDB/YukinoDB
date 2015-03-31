@@ -112,6 +112,32 @@ TEST_F(BtreeTableTest, Reopen) {
     EXPECT_EQ("3", iter->value());
 }
 
+TEST_F(BtreeTableTest, ChunkRW) {
+    auto rs = table_->Create(kPageSize, Config::kBtreeFileVersion, 3, &io_);
+    ASSERT_TRUE(rs.ok());
+
+
+    {
+        std::string dummy(2, '1'), buf;
+        uint64_t addr = 0;
+        rs = table_->TEST_WriteChunk(dummy.data(), dummy.size(), &addr);
+        ASSERT_TRUE(rs.ok()) << rs.ToString();
+
+        rs = table_->TEST_ReadChunk(addr, &buf);
+        ASSERT_TRUE(rs.ok()) << rs.ToString();
+        EXPECT_EQ(dummy, buf);
+    } {
+        std::string dummy(kPageSize - 11, '1'), buf;
+        uint64_t addr = 0;
+        rs = table_->TEST_WriteChunk(dummy.data(), dummy.size(), &addr);
+        ASSERT_TRUE(rs.ok()) << rs.ToString();
+
+        rs = table_->TEST_ReadChunk(addr, &buf);
+        ASSERT_TRUE(rs.ok()) << rs.ToString();
+        EXPECT_EQ(dummy, buf);
+    }
+}
+
 } // namespace balance
 
 } // namespace yukino

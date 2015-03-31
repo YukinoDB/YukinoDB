@@ -60,6 +60,17 @@ public:
     Iterator *CreateIterator() const;
 
     //--------------------------------------------------------------------------
+    // Testing:
+    //--------------------------------------------------------------------------
+    base::Status TEST_WriteChunk(const char *buf, size_t len, uint64_t *addr) {
+        return WriteChunk(buf, len, addr);
+    }
+
+    base::Status TEST_ReadChunk(uint64_t addr, std::string *buf) {
+        return ReadChunk(addr, buf);
+    }
+
+    //--------------------------------------------------------------------------
     // Types:
     //--------------------------------------------------------------------------
     struct Comparator {
@@ -105,8 +116,12 @@ private:
                               uint64_t id, PageTy **rv);
 
     base::Status WritePage(const PageTy *page);
+    base::Status WriteChunk(const char *buf, size_t len, uint64_t *addr);
+    base::Status WriteBlock(const char *buf, uint16_t len, uint8_t type,
+                            uint64_t addr, uint64_t next);
+    base::Status ReadChunk(uint64_t addr, std::string *buf);
 
-    base::Status MakeRoomForPage(uint64_t id, uint64_t *addr);
+    base::Status MakeRoomForPage(uint64_t *addr);
     base::Status FreeRoomForPage(uint64_t id);
 
     inline PageTy *AllocatePage(int num_entries);

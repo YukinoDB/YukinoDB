@@ -21,6 +21,9 @@ struct Config final {
     static const uint8_t kPageTypeFull = 1;
     static const uint8_t kPageLeafFlag = 0x80;
 
+    // The B+tree page len is 2 byte wide.
+    // So, the kMaxPageSize is max uint16_t.
+    static const uint32_t kMaxPageSize = UINT16_MAX;
 
     Config() = delete;
     ~Config() = delete;
