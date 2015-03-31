@@ -37,7 +37,7 @@ const static size_t kMB = 1024 * kKB;
 const static size_t kGB = 1024 * kMB;
 const static size_t kTB = 1024 * kGB;
 
-struct Strings {
+struct Strings final {
 
     __attribute__ (( __format__ (__printf__, 1, 2)))
     static std::string Sprintf(const char *fmt, ...);
@@ -57,7 +57,7 @@ struct Strings {
 
 #define YK_CLZ32(n) __builtin_clz((uint32_t)( n ))
 
-struct Bits {
+struct Bits final {
 
     // Fast find first zero, right to left
     // Base on binary searching
