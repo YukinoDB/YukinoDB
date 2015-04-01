@@ -541,7 +541,6 @@ BTree<Key, Comparator, Allocator>::Erase(const Key &key, Page *node,
 template<class Key, class Comparator, class Allocator>
 void BTree<Key, Comparator, Allocator>::SplitLeaf(Page *page) {
     DCHECK(page->is_leaf());
-    //bool is_new = false;
 
     auto num_entries = static_cast<int>(page->entries.size()) / 2;
     auto sibling = AllocatePage(num_entries, kLeaf);
@@ -584,6 +583,7 @@ void BTree<Key, Comparator, Allocator>::SplitNonLeaf(Page *page) {
 
     sibling->parent.page = parent;
     sibling->link = page->link;
+    sibling->link->parent.page = sibling;
     page->MoveTo(-num_entries, sibling, comparator_);
 
     page->link = page->back().link;

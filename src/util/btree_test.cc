@@ -433,6 +433,24 @@ TEST_F(BTreeTest, DeleteMiddleLeaf) {
     EXPECT_EQ(17, page->key(1));
 }
 
+TEST_F(BTreeTest, LargePuting) {
+    IntTree tree(127, int_comparator);
+
+    static const auto k = 100000;
+
+    int dummy = 0;
+    for (auto i = 0; i < k; ++i) {
+        ASSERT_FALSE(tree.Put(i, &dummy)) << i;
+    }
+
+    IntTree::Iterator iter(&tree);
+    auto i = 0;
+    for (iter.SeekToFirst(); iter.Valid(); iter.Next()) {
+        ASSERT_EQ(i, iter.key());
+        ++i;
+    }
+}
+
 } // namespace util
 
 } // namespace yukino
