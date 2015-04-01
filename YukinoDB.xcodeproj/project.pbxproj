@@ -38,6 +38,7 @@
 		23AF17241ACC136F00066178 /* skiplist_test.cc in Sources */ = {isa = PBXBuildFile; fileRef = 23AF17231ACC136F00066178 /* skiplist_test.cc */; };
 		23AF17281ACC1D5500066178 /* log.cc in Sources */ = {isa = PBXBuildFile; fileRef = 23AF17261ACC1D5500066178 /* log.cc */; };
 		23AF172A1ACC1D6600066178 /* log_test.cc in Sources */ = {isa = PBXBuildFile; fileRef = 23AF17291ACC1D6600066178 /* log_test.cc */; };
+		23AF172C1ACC3B6900066178 /* redo_log.cc in Sources */ = {isa = PBXBuildFile; fileRef = 23AF172B1ACC3B6900066178 /* redo_log.cc */; };
 		23B694E91A82207300E711E4 /* db.cc in Sources */ = {isa = PBXBuildFile; fileRef = 23B694DB1A82207300E711E4 /* db.cc */; };
 		23B694EA1A82207300E711E4 /* options.cc in Sources */ = {isa = PBXBuildFile; fileRef = 23B694DE1A82207300E711E4 /* options.cc */; };
 		23B694EB1A82207300E711E4 /* read_options.cc in Sources */ = {isa = PBXBuildFile; fileRef = 23B694E01A82207300E711E4 /* read_options.cc */; };
@@ -205,6 +206,8 @@
 		23AF17261ACC1D5500066178 /* log.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = log.cc; path = src/util/log.cc; sourceTree = "<group>"; };
 		23AF17271ACC1D5500066178 /* log.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = log.h; path = src/util/log.h; sourceTree = "<group>"; };
 		23AF17291ACC1D6600066178 /* log_test.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = log_test.cc; path = src/util/log_test.cc; sourceTree = SOURCE_ROOT; };
+		23AF172B1ACC3B6900066178 /* redo_log.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = redo_log.cc; path = src/balance/redo_log.cc; sourceTree = "<group>"; };
+		23AF172D1ACC3FD500066178 /* io-inl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "io-inl.h"; sourceTree = "<group>"; };
 		23B694D91A82206100E711E4 /* base.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = base.h; sourceTree = "<group>"; };
 		23B694DA1A82207300E711E4 /* comparator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = comparator.h; sourceTree = "<group>"; };
 		23B694DB1A82207300E711E4 /* db.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = db.cc; sourceTree = "<group>"; };
@@ -286,6 +289,7 @@
 				2315D61F1AC58F9C0022E1E9 /* format.h */,
 				2315D6201AC590130022E1E9 /* format.cc */,
 				23AF17251ACC1CDE00066178 /* redo_log.h */,
+				23AF172B1ACC3B6900066178 /* redo_log.cc */,
 			);
 			name = balance;
 			sourceTree = "<group>";
@@ -384,6 +388,7 @@
 				23B694D91A82206100E711E4 /* base.h */,
 				237F99371AB085CC0063BF2C /* base.cc */,
 				23B694EF1A83196900E711E4 /* io.h */,
+				23AF172D1ACC3FD500066178 /* io-inl.h */,
 				23CD83F21A86624C00D64229 /* io.cc */,
 				23B694F21A831C1500E711E4 /* crc32.h */,
 				23B694F31A831CCE00E711E4 /* crc32.cc */,
@@ -638,6 +643,7 @@
 				23681CC81AA34D9D002721BE /* merger.cc in Sources */,
 				23CD83DF1A834E7700D64229 /* table_builder.cc in Sources */,
 				2315D6231AC84DC50022E1E9 /* format_test.cc in Sources */,
+				23AF172C1ACC3B6900066178 /* redo_log.cc in Sources */,
 				23EEF9A71AA5854C0003C37C /* merger_test.cc in Sources */,
 				237ECB161AAC8AFB00EF7FB1 /* version.cc in Sources */,
 				23B694E91A82207300E711E4 /* db.cc in Sources */,

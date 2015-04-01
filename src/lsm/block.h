@@ -3,6 +3,7 @@
 
 #include "lsm/builtin.h"
 #include "yukino/iterator.h"
+#include "base/io-inl.h"
 #include "base/io.h"
 #include "base/status.h"
 #include "base/slice.h"

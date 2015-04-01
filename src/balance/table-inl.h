@@ -7,7 +7,11 @@ namespace yukino {
 
 namespace balance {
 
-#define CHECK_OK(expr) rs = (expr); if (!rs.ok()) return rs
+#if defined(CHECK_OK)
+#   undef CHECK_OK
+#else
+#   define CHECK_OK(expr) rs = (expr); if (!rs.ok()) return rs
+#endif
 
 inline uint64_t Table::Addr2Index(uint64_t addr) {
     DCHECK_LT(addr, file_size_);

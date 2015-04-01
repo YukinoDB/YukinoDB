@@ -1,4 +1,5 @@
 #include "yukino/write_batch.h"
+#include "base/io-inl.h"
 #include "base/io.h"
 #include "glog/logging.h"
 
@@ -57,7 +58,7 @@ void WriteBatch::Clear() {
 
     base::BufferedReader reader(buf, len);
     while (reader.active() > 0) {
-        auto type = reader.Read();
+        auto type = reader.ReadByte();
         size_t size = reader.ReadVarint32();
         auto key  = reader.Read(size);
 

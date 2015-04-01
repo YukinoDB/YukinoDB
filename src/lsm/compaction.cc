@@ -5,6 +5,7 @@
 #include "lsm/format.h"
 #include "lsm/builtin.h"
 #include "lsm/chunk.h"
+#include "base/io-inl.h"
 #include "base/io.h"
 #include "yukino/env.h"
 #include "yukino/options.h"

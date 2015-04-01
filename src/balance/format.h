@@ -2,6 +2,7 @@
 #define YUKINO_BALANCE_FORMAT_H_
 
 #include "base/slice.h"
+#include "base/io-inl.h"
 #include "base/io.h"
 #include "yukino/comparator.h"
 

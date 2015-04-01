@@ -4,6 +4,7 @@
 #include "lsm/builtin.h"
 #include "base/varint_encoding.h"
 #include "base/crc32.h"
+#include "base/io-inl.h"
 #include "base/io.h"
 #include "glog/logging.h"
 #include <vector>

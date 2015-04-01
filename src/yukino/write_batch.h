@@ -1,6 +1,7 @@
 #ifndef YUKINO_API_WRITE_BATCH_H_
 #define YUKINO_API_WRITE_BATCH_H_
 
+#include "base/io-inl.h"
 #include "base/io.h"
 #include "base/status.h"
 #include "base/slice.h"

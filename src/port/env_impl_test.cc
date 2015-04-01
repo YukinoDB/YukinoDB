@@ -6,6 +6,7 @@
 //
 //
 #include "yukino/env.h"
+#include "base/io-inl.h"
 #include "base/io.h"
 #include "gtest/gtest.h"
 #include <stdio.h>

@@ -1,6 +1,7 @@
 #ifndef YUKINO_BASE_MEM_IO_H_
 #define YUKINO_BASE_MEM_IO_H_
 
+#include "base/io-inl.h"
 #include "base/io.h"
 #include <string>
 

@@ -10,6 +10,7 @@
 #include "lsm/chunk.h"
 #include "yukino/comparator.h"
 #include "base/mem_io.h"
+#include "base/io-inl.h"
 #include "base/io.h"
 #include "gtest/gtest.h"
 #include <stdio.h>

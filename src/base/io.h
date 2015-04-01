@@ -64,35 +64,19 @@ public:
     Reader();
     virtual ~Reader();
 
-    Status ReadString(std::string *str) {
-        uint32_t len = 0;
-        auto rs = ReadVarint32(&len, nullptr);
-        if (!rs.ok()) {
-            return rs;
-        }
-        str->resize(len);
-        return Read(&str->at(0), len);
-    }
+    inline Status ReadString(std::string *str);
 
-    Status ReadLargeString(std::string *str) {
-        uint64_t len = 0;
-        auto rs = ReadVarint64(&len, nullptr);
-        if (!rs.ok()) {
-            return rs;
-        }
-        str->resize(len);
-        return Read(&str->at(0), len);
-    }
-
-    Status ReadVarint32(uint32_t *value, size_t *read);
-
-    Status ReadVarint64(uint64_t *value, size_t *read);
+    inline Status ReadLargeString(std::string *str);
 
     Status ReadFixed16(uint16_t *value) { return Read(value, sizeof(*value)); }
 
     Status ReadFixed32(uint32_t *value) { return Read(value, sizeof(*value)); }
 
     Status ReadFixed64(uint64_t *value) { return Read(value, sizeof(*value)); }
+
+    Status ReadVarint32(uint32_t *value, size_t *read);
+
+    Status ReadVarint64(uint64_t *value, size_t *read);
 
     virtual Status Read(void *buf, size_t size) = 0;
 
@@ -116,13 +100,7 @@ public:
 
     virtual Status Skip(size_t count) override;
 
-    Status Write(char ch) {
-        if (!Advance(1)) {
-            return Status::Corruption("not enough memory.");
-        }
-        buf_[len_++] = ch;
-        return Status::OK();
-    }
+    inline Status Write(char ch);
 
     const char *buf() const { return buf_.get(); }
     size_t len() const { return len_; }
@@ -130,18 +108,9 @@ public:
 
     char *mutable_buf() { return buf_.get(); }
 
-    char *Drop() {
-        auto droped = buf_.release();
-        len_ = 0;
-        cap_ = 0;
-        return droped;
-    }
+    inline char *Drop();
 
-    void Clear() {
-        std::unique_ptr<char[]>().swap(buf_);
-        len_ = 0;
-        cap_ = 0;
-    }
+    inline void Clear();
 
     char *tail() { return mutable_buf() + len_; }
 
@@ -161,26 +130,15 @@ public:
     virtual ~VerifiedWriter() {}
 
     virtual Status Write(const void *data, size_t size,
-                         size_t *written) override {
-        checker_.Update(data, size);
-        return delegated_->Write(data, size, written);;
-    }
+                         size_t *written) override;
 
-    virtual Status Skip(size_t count) override {
-        return delegated_->Skip(count);
-    }
+    virtual Status Skip(size_t count) override;
 
-    void Reset() {
-        checker_.Reset();
-    }
+    void Reset() { checker_.Reset(); }
 
-    typename Checksum::DigestTy digest() const {
-        return checker_.digest();
-    }
+    typename Checksum::DigestTy digest() const { return checker_.digest(); }
 
-    Writer *delegated() const {
-        return delegated_;
-    }
+    Writer *delegated() const { return delegated_; }
 
     virtual size_t active() const override { return delegated_->active(); }
 
@@ -195,34 +153,16 @@ public:
     VerifiedReader(Reader *delegated) : delegated_(delegated) {}
     virtual ~VerifiedReader() {}
 
-    virtual Status Read(void *buf, size_t size) {
-        auto rs = delegated_->Read(buf, size);
-        if (rs.ok()) {
-            checker_.Update(buf, size);
-        }
-        return rs;
-    }
+    virtual Status Read(void *buf, size_t size);
 
-    virtual int ReadByte() {
-        auto rv = delegated_->ReadByte();
-        if (rv != EOF) {
-            auto byte = static_cast<uint8_t>(rv);
-            checker_.Update(&byte, sizeof(byte));
-        }
-        return rv;
-    }
+    virtual int ReadByte();
 
-    virtual Status Ignore(size_t count) {
-        return delegated_->Ignore(count);
-    }
+    virtual Status Ignore(size_t count) { return delegated_->Ignore(count); }
 
-    void Reset() {
-        checker_.Reset();
-    }
+    void Reset() { checker_.Reset(); }
 
-    typename Checksum::DigestTy digest() const {
-        return checker_.digest();
-    }
+    typename Checksum::DigestTy
+    digest() const { return checker_.digest(); }
 
     Writer *delegated() const {
         return delegated_;
@@ -239,65 +179,23 @@ private:
  */
 class BufferedReader : public DisableCopyAssign {
 public:
-    BufferedReader(const void *buf, size_t len)
-        : buf_(static_cast<const uint8_t *>(DCHECK_NOTNULL(buf)))
-        , active_(len) {
-        DCHECK_LT(0, active_);
-    }
+    inline BufferedReader(const void *buf, size_t len);
 
-    Slice Read(size_t count) {
-        DCHECK_GE(active_, count);
-        Slice rv(typed<char>(), count);
-        Advance(count);
-        return rv;
-    }
+    inline Slice Read(size_t count);
 
     Slice ReadString() { return Read(ReadVarint32()); }
 
     Slice ReadLargeString() { return Read(ReadVarint64()); }
 
-    char Read() {
-        auto ch = *typed<char>();
-        Advance(1);
-        return ch;
-    }
-
-    uint16_t ReadFixed16() {
-        DCHECK_GE(active_, sizeof(uint16_t));
-        auto rv = *typed<uint16_t>();
-        Advance(sizeof(uint16_t));
-        return rv;
-    }
-
-    uint32_t ReadFixed32() {
-        DCHECK_GE(active_, sizeof(uint32_t));
-        auto rv = *typed<uint32_t>();
-        Advance(sizeof(uint32_t));
-        return rv;
-    }
-
-    uint64_t ReadFixed64() {
-        DCHECK_GE(active_, sizeof(uint64_t));
-        auto rv = *typed<uint64_t>();
-        Advance(sizeof(uint64_t));
-        return rv;
-    }
+    inline uint8_t ReadByte();
+    inline uint16_t ReadFixed16();
+    inline uint32_t ReadFixed32();
+    inline uint64_t ReadFixed64();
 
     uint32_t ReadVarint32();
-
     uint64_t ReadVarint64();
 
-    uint8_t ReadByte() {
-        DCHECK_GE(active_, sizeof(uint8_t));
-        auto rv = *buf_;
-        Advance(sizeof(uint8_t));
-        return rv;
-    }
-
-    void Skip(size_t count) {
-        DCHECK_GE(active_, count);
-        Advance(count);
-    }
+    inline void Ignore(size_t count);
 
     size_t active() const { return active_; }
 
@@ -310,9 +208,7 @@ private:
     }
 
     template<class T>
-    inline const T *typed() {
-        return reinterpret_cast<const T*>(buf_);
-    }
+    inline const T *typed() { return reinterpret_cast<const T*>(buf_); }
 
     const uint8_t *buf_;
     size_t active_;
@@ -332,20 +228,12 @@ public:
     size_t size() const { return len_; }
 
     const uint8_t *buf() const { return buf(0); }
-    const uint8_t *buf(size_t offset) const {
-        DCHECK_LT(offset, len_);
-        return buf_ + offset;
-    }
+    inline const uint8_t *buf(size_t offset) const;
 
     const std::string &file_name() const { return file_name_; }
 
-    static MappedMemory Attach(std::string *buf) {
-        return Attach(&buf->at(0), buf->length());
-    }
-
-    static MappedMemory Attach(void *buf, size_t len) {
-        return MappedMemory(":memory:", buf, len);
-    }
+    inline static MappedMemory Attach(std::string *buf);
+    inline static MappedMemory Attach(void *buf, size_t len);
 
 protected:
     uint8_t *buf_;

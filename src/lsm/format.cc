@@ -1,4 +1,5 @@
 #include "lsm/format.h"
+#include "base/io-inl.h"
 #include "base/io.h"
 #include "glog/logging.h"
 

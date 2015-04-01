@@ -1,3 +1,4 @@
+#include "base/io-inl.h"
 #include "base/io.h"
 #include "port/io_impl.h"
 #include "base/varint_encoding.h"

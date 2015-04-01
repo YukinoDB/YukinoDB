@@ -1,6 +1,7 @@
 #include "lsm/table.h"
 #include "lsm/builtin.h"
 #include "yukino/comparator.h"
+#include "base/io-inl.h"
 #include "base/io.h"
 #include "base/varint_encoding.h"
 #include "base/slice.h"

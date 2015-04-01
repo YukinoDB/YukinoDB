@@ -1,5 +1,6 @@
 #include "lsm/chunk.h"
 #include "lsm/builtin.h"
+#include "base/io-inl.h"
 #include "base/io.h"
 #include "base/varint_encoding.h"
 #include "glog/logging.h"
@@ -132,7 +133,7 @@ InternalKey::InternalKey(char *key, uint32_t user_key_size)
 
 /*static*/ Tag InternalKey::ExtractTag(const base::Slice &raw) {
     base::BufferedReader rd(raw.data(), raw.size());
-    rd.Skip(raw.size() - Tag::kTagSize);
+    rd.Ignore(raw.size() - Tag::kTagSize);
     return Tag::Decode(rd.ReadFixed64());
 }
 

@@ -6,6 +6,7 @@
 #include "yukino/options.h"
 #include "yukino/iterator.h"
 #include "yukino/env.h"
+#include "base/io-inl.h"
 #include "base/io.h"
 #include "glog/logging.h"
 

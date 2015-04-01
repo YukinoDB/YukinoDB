@@ -1,4 +1,5 @@
 #include "balance/format.h"
+#include "base/io-inl.h"
 #include "base/io.h"
 #include "base/varint_encoding.h"
 #include "glog/logging.h"

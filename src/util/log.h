@@ -1,6 +1,7 @@
 #ifndef YUKINO_LSM_LOG_H_
 #define YUKINO_LSM_LOG_H_
 
+#include "base/io-inl.h"
 #include "base/io.h"
 #include "base/crc32.h"
 

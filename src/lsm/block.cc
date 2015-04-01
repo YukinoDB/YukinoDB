@@ -1,6 +1,7 @@
 #include "lsm/block.h"
 #include "lsm/chunk.h"
 #include "yukino/comparator.h"
+#include "base/io-inl.h"
 #include "base/io.h"
 #include "base/crc32.h"
 #include "base/slice.h"

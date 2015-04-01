@@ -1,5 +1,6 @@
 #include "balance/table-inl.h"
 #include "balance/table.h"
+#include "base/io-inl.h"
 #include "base/io.h"
 #include "base/crc32.h"
 #include "base/varint_encoding.h"

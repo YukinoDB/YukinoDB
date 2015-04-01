@@ -4,6 +4,7 @@
 #include "lsm/builtin.h"
 #include "lsm/chunk.h"
 #include "yukino/comparator.h"
+#include "base/io-inl.h"
 #include "base/io.h"
 #include "glog/logging.h"
 

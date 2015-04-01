@@ -110,7 +110,7 @@ bool LogReader::Read(base::Slice *slice, std::string* scratch) {
 
         if (left_over < Log::kHeaderSize) {
             if (left_over > 0) {
-                reader_.Skip(left_over);
+                reader_.Ignore(left_over);
             }
             block_offset_ = 0;
         }
