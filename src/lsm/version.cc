@@ -1,8 +1,8 @@
 #include "lsm/version.h"
 #include "lsm/table_cache.h"
 #include "lsm/merger.h"
-#include "lsm/log.h"
 #include "lsm/compaction.h"
+#include "util/log.h"
 #include "yukino/options.h"
 #include "yukino/iterator.h"
 #include "yukino/env.h"
@@ -338,8 +338,7 @@ base::Status VersionSet::AddIterators(const ReadOptions &options,
 
         for (const auto &file : files) {
             std::unique_ptr<Iterator> iter(table_cache_->CreateIterator(options,
-                                                                        file->number,
-                                                                        file->size));
+                                                     file->number, file->size));
             rs = iter->status();
             if (!rs.ok()) {
                 break;
@@ -360,7 +359,8 @@ base::Status VersionSet::Recovery(uint64_t file_number,
         return rs;
     }
     std::unique_ptr<base::MappedMemory> file(rv);
-    Log::Reader reader(file->buf(), file->size(), true, Log::kDefaultBlockSize);
+    util::Log::Reader reader(file->buf(), file->size(), true,
+                             util::Log::kDefaultBlockSize);
 
     VersionPatch patch;
     VersionSet::Builder builder(this, current());
@@ -453,8 +453,8 @@ base::Status VersionSet::CreateManifestFile() {
         return rs;
     }
     log_file_ = std::unique_ptr<base::AppendFile>(file);
-    log_ = std::unique_ptr<Log::Writer>(new Log::Writer(log_file_.get(),
-                                                        Log::kDefaultBlockSize));
+    log_ = std::unique_ptr<util::Log::Writer>(new util::Log::Writer(log_file_.get(),
+                                                util::Log::kDefaultBlockSize));
 
     return WriteSnapshot();
 }

@@ -48,6 +48,7 @@ struct ParsedKey {
     // Flag: value or deletion
     uint8_t     flag  = kFlagValue;
 
+    // The all key:
     base::Slice key() const {
         return base::Slice(user_key.data(), user_key.size() + sizeof(tx_id));
     }

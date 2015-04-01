@@ -12,7 +12,7 @@ class Writer;
 
 } // namespace base
 
-namespace lsm {
+namespace util {
 
 class LogWriter;
 class LogReader;
@@ -67,7 +67,8 @@ private:
 
     base::CRC32::DigestTy typed_checksums_[Log::kMaxRecordType + 1];
     base::Writer *writer_;
-};
+
+}; // class LogWriter
 
 class LogReader {
 public:
@@ -78,10 +79,6 @@ public:
     const base::Status &status() const { return status_; }
 
 private:
-    struct Buf {
-        
-    };
-
     Log::RecordType ReadPhysicalRecord(base::Slice *slice, int *fail);
 
     const size_t block_size_;
@@ -90,9 +87,10 @@ private:
     bool checksum_;
     base::Status status_;
     base::BufferedReader reader_;
-};
 
-} // namespace lsm
+}; // class LogReader
+
+} // namespace util
 
 } // namespace yukino
 

@@ -1,9 +1,9 @@
-#include "lsm/log.h"
+#include "util/log.h"
 #include "glog/logging.h"
 
 namespace yukino {
 
-namespace lsm {
+namespace util {
 
 LogWriter::LogWriter(base::Writer *writer, size_t block_size)
     : block_size_(block_size)
@@ -162,6 +162,6 @@ Log::RecordType LogReader::ReadPhysicalRecord(base::Slice *slice, int *fail) {
     return static_cast<Log::RecordType>(type);
 }
 
-} // namespace lsm
+} // namespace util
     
 } // namespace yukino

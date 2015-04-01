@@ -183,6 +183,7 @@ struct Page {
                 rv = to->Put(entries[i], cmp);
                 if (rv->link) {
                     rv->link->parent.page = to;
+                    rv->link->dirty++;
                 }
             }
             entries.erase(entries.begin(), entries.begin() + num);
@@ -192,6 +193,7 @@ struct Page {
                 rv = to->Put(entries[i], cmp);
                 if (rv->link) {
                     rv->link->parent.page = to;
+                    rv->link->dirty++;
                 }
             }
             entries.erase(entries.end() - num, entries.end());
@@ -588,6 +590,7 @@ void BTree<Key, Comparator, Allocator>::SplitNonLeaf(Page *page) {
 
     // NOTICE: Ensure sibling's children parent pointer.
     sibling->link->parent.page = sibling;
+    sibling->link->dirty++;
     page->MoveTo(-num_entries, sibling, comparator_);
 
     page->link = page->back().link;
@@ -597,6 +600,7 @@ void BTree<Key, Comparator, Allocator>::SplitNonLeaf(Page *page) {
 
     // NOTICE: Ensure page's children parent pointer.
     page->link->parent.page = page;
+    page->link->dirty++;
 
     DCHECK_EQ(sibling->parent.page, parent);
     if (parent->size() > PageMaxSize(parent)) {

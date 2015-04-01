@@ -26,11 +26,16 @@ class AppendFile;
 
 } // namespace base
 
+namespace util {
+
+class LogWriter;
+    
+} // namespace util
+
 namespace lsm {
 
 class VersionSet;
 class TableCache;
-class LogWriter;
 class VersionBuilder;
 class Compaction;
 
@@ -321,7 +326,7 @@ private:
     TableCache *table_cache_;
 
     std::unique_ptr<base::AppendFile> log_file_;
-    std::unique_ptr<LogWriter> log_;
+    std::unique_ptr<util::LogWriter> log_;
 };
 
 class VersionBuilder : public base::DisableCopyAssign {

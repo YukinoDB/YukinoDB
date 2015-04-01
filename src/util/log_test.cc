@@ -5,7 +5,7 @@
 //  Created by Niko Bellic.
 //
 //
-#include "lsm/log.h"
+#include "util/log.h"
 #include "base/mem_io.h"
 #include "base/io.h"
 #include "gtest/gtest.h"
@@ -13,7 +13,7 @@
 
 namespace yukino {
 
-namespace lsm {
+namespace util {
 
 class LogTest : public ::testing::Test {
 public:
@@ -101,6 +101,6 @@ TEST_F(LogTest, BlockFilling) {
     EXPECT_FALSE(rd.Read(&slice, &scratch_));
 }
 
-} // namespace lsm
+} // namespace util
 
 } // namespace yukino

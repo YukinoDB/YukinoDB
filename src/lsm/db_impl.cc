@@ -5,8 +5,8 @@
 #include "lsm/table_cache.h"
 #include "lsm/table_builder.h"
 #include "lsm/version.h"
-#include "lsm/log.h"
 #include "lsm/compaction.h"
+#include "util/log.h"
 #include "yukino/iterator.h"
 #include "yukino/write_batch.h"
 #include "yukino/options.h"
@@ -45,8 +45,8 @@ public:
     virtual ~WritingHandler() override {
     }
 
-    virtual void Put(const base::Slice& key, const base::Slice& value) override {
-        //DLOG(INFO) << "key: " << key.ToString() << " version: " << version();
+    virtual void Put(const base::Slice& key,
+                     const base::Slice& value) override {
         mutable_->Put(key, value, version(), kFlagValue);
         ++counting_version_;
 
@@ -96,7 +96,8 @@ base::Status DBImpl::Open(const Options &opt) {
     }
 
     if (block_restart_interval_ <= 0) {
-        return base::Status::InvalidArgument("block_restart_interval out of range");
+        return base::Status::InvalidArgument("block_restart_interval out"
+                                             " of range");
     }
 
 //    if (write_buffer_size_ <= 1 * base::kMB) {
@@ -301,8 +302,8 @@ base::Status DBImpl::NewDB(const Options &opt) {
     }
 
     log_file_ = std::unique_ptr<base::AppendFile>(file);
-    log_ = std::unique_ptr<LogWriter>(new Log::Writer(file,
-                                                      Log::kDefaultBlockSize));
+    log_ = std::unique_ptr<util::LogWriter>(new util::Log::Writer(file,
+                                                 util::Log::kDefaultBlockSize));
 
     VersionPatch patch(internal_comparator_->delegated()->Name());
     patch.set_prev_log_number(0);
@@ -353,8 +354,8 @@ base::Status DBImpl::Recovery() {
     }
 
     log_file_ = std::unique_ptr<base::AppendFile>(file);
-    log_ = std::unique_ptr<LogWriter>(new Log::Writer(file,
-                                                      Log::kDefaultBlockSize));
+    log_ = std::unique_ptr<util::LogWriter>(new util::Log::Writer(file,
+                                                 util::Log::kDefaultBlockSize));
     return base::Status::OK();
 }
 
@@ -367,7 +368,8 @@ base::Status DBImpl::Redo(uint64_t file_number, uint64_t last_version) {
     }
 
     std::unique_ptr<base::MappedMemory> file(rv);
-    Log::Reader reader(file->buf(), file->size(), true, Log::kDefaultBlockSize);
+    util::Log::Reader reader(file->buf(), file->size(), true,
+                             util::Log::kDefaultBlockSize);
     base::Slice record;
     std::string buf;
 
@@ -482,8 +484,8 @@ base::Status DBImpl::MakeRoomForWrite(bool force,
 
             log_file_number_ = new_log_number;
             log_file_ = std::unique_ptr<base::AppendFile>(file);
-            log_ = std::unique_ptr<LogWriter>(new Log::Writer(file,
-                                                       Log::kDefaultBlockSize));
+            log_ = std::unique_ptr<util::LogWriter>(new util::Log::Writer(file,
+                                                 util::Log::kDefaultBlockSize));
             immtable_ = mutable_;
             mutable_ = new MemoryTable(*internal_comparator_);
             force = false;
@@ -584,7 +586,8 @@ void DBImpl::BackgroundCompaction() {
         file->Close();
         mutex_.lock();
 
-        base::Handle<FileMetadata> metadata(new FileMetadata(compaction->target_file_number()));
+        base::Handle<FileMetadata> metadata(new FileMetadata(
+                                             compaction->target_file_number()));
         rs = table_cache_->GetFileMetadata(metadata->number, metadata.get());
         if (!rs.ok()) {
             background_error_ = rs;
@@ -636,7 +639,8 @@ base::Status DBImpl::WriteLevel0Table(const Version *current,
                                       VersionPatch *patch,
                                       MemoryTable *table) {
 
-    base::Handle<FileMetadata> metadata(new FileMetadata(versions_->GenerateFileNumber()));
+    base::Handle<FileMetadata> metadata(new FileMetadata(
+                                              versions_->GenerateFileNumber()));
     std::unique_ptr<Iterator> iter(table->NewIterator());
     if (!iter->status().ok()) {
         return iter->status();
@@ -678,12 +682,6 @@ base::Status DBImpl::BuildTable(Iterator *iter, FileMetadata *metadata) {
             break;
         }
 
-//        {
-//            auto show_key = InternalKey::CreateKey(iter->key());
-//            DLOG(INFO) << "dump key: " << show_key.user_key_slice().ToString()
-//                       << " version: " << show_key.tag().version;
-//        }
-
         counter++;
     }
     if (rs.ok()) {
@@ -696,8 +694,7 @@ base::Status DBImpl::BuildTable(Iterator *iter, FileMetadata *metadata) {
         env_->DeleteFile(file_name, false);
         return rs;
     }
-//    DLOG(INFO) << "Build table: " << metadata->number
-//               << " ok, count: " << counter;
+
     metadata->ctime = now_microseconds();
     return table_cache_->GetFileMetadata(metadata->number, metadata);
 }

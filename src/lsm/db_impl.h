@@ -22,6 +22,12 @@ class FileLock;
 
 } // namespace base
 
+namespace util {
+
+class LogWriter;
+
+} // namespace util
+
 namespace lsm {
 
 class VersionSet;
@@ -29,7 +35,6 @@ class VersionPatch;
 class Version;
 struct FileMetadata;
 class TableCache;
-class LogWriter;
 class InternalKeyComparator;
 class SnapshotList;
 class SnapshotImpl;
@@ -178,7 +183,7 @@ private:
     std::unique_ptr<TableCache> table_cache_;
     std::unique_ptr<VersionSet> versions_;
     std::unique_ptr<InternalKeyComparator> internal_comparator_;
-    std::unique_ptr<LogWriter> log_;
+    std::unique_ptr<util::LogWriter> log_;
     std::unique_ptr<base::AppendFile> log_file_;
     uint64_t log_file_number_ = 0;
 

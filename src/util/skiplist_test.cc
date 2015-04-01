@@ -20,11 +20,11 @@
 
 namespace yukino {
 
-namespace lsm {
+namespace util {
 
 class SkipListTest : public ::testing::Test {
 public:
-    typedef util::SkipList<int, std::function<int (int, int)>> IntSkipList;
+    typedef SkipList<int, std::function<int (int, int)>> IntSkipList;
 
     SkipListTest () {
     }
@@ -123,21 +123,21 @@ TEST_F(SkipListTest, ThreadingPut) {
 
 TEST_F(SkipListTest, ChunkPut) {
 
-    auto comparator = [] (const InternalKey &a, const InternalKey &b) {
+    auto comparator = [] (const lsm::InternalKey &a, const lsm::InternalKey &b) {
         return BytewiseCompartor()->Compare(a.user_key_slice(), b.user_key_slice());
     };
 
-    typedef util::SkipList<InternalKey,
-                    std::function<int(const InternalKey &, const InternalKey &)>> Table;
+    typedef util::SkipList<lsm::InternalKey,
+                    std::function<int(const lsm::InternalKey &, const lsm::InternalKey &)>> Table;
     Table list(comparator);
 
-    InternalKey key[] = {
-        InternalKey::CreateKey("a", "1", 100, kFlagValue),
-        InternalKey::CreateKey("b", "2", 200, kFlagValue),
-        InternalKey::CreateKey("c", "3", 300, kFlagValue),
+    lsm::InternalKey key[] = {
+        lsm::InternalKey::CreateKey("a", "1", 100, lsm::kFlagValue),
+        lsm::InternalKey::CreateKey("b", "2", 200, lsm::kFlagValue),
+        lsm::InternalKey::CreateKey("c", "3", 300, lsm::kFlagValue),
     };
 
-    for (InternalKey &k : key) {
+    for (lsm::InternalKey &k : key) {
         list.Put(std::move(k));
     }
 
@@ -161,6 +161,6 @@ TEST_F(SkipListTest, ChunkPut) {
     EXPECT_EQ(300ULL, iter.key().tag().version);
 }
 
-} // namespace lsm
+} // namespace util
 
 } // namespace yukino
