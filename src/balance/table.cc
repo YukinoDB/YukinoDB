@@ -68,7 +68,8 @@ struct PhysicalBlock {
 const char PhysicalBlock::kZeroHeader[PhysicalBlock::kHeaderSize] = {0};
 
 Table::Table(InternalKeyComparator comparator)
-    : comparator_(comparator) {
+    : comparator_(comparator)
+    , bitmap_(0) {
 }
 
 Table::~Table() {
@@ -401,8 +402,8 @@ base::Status Table::ReadChunk(uint64_t addr, std::string *buf) {
 base::Status Table::MakeRoomForPage(uint64_t *addr) {
     base::Status rs;
 
-    uint64_t index = 0;
-    for (auto bits : bitmap_) {
+    int index = 0;
+    for (auto bits : bitmap_.bits()) {
         auto i = base::Bits::FindFirstZero32(bits);
         if (i >= 0 && i < 32) {
             //bitmap_[(index + 31) / 32] |= (1 << i);
@@ -419,8 +420,8 @@ base::Status Table::MakeRoomForPage(uint64_t *addr) {
         file_size_ += page_size_;
         CHECK_OK(file_->Truncate(file_size_));
 
-        if (bitmap_.size() < ((index + 31) / 32) + 1) {
-            bitmap_.push_back(0u);
+        if (bitmap_.num_buckets() < ((index + 31) / 32) + 1) {
+            bitmap_.AddBucket(0u);
         }
     }
 
@@ -480,8 +481,8 @@ base::Status Table::InitFile(int order) {
 }
 
 base::Status Table::LoadTree() {
-    auto num_dwords = (file_size_ / page_size_) - 1;
-    bitmap_.resize((num_dwords + 31) / 32, 0u);
+    auto num_pages = (file_size_ / page_size_) - 1;
+    bitmap_.Resize(static_cast<int>(num_pages));
 
     base::Status rs;
 

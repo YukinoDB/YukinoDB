@@ -3,6 +3,7 @@
 
 #include "balance/format.h"
 #include "util/btree.h"
+#include "util/bloom_filter.h"
 #include "base/ref_counted.h"
 #include "base/status.h"
 #include "base/base.h"
@@ -50,6 +51,11 @@ public:
 
     bool Get(const base::Slice &key, uint64_t tx_id, std::string *value);
 
+    /**
+     * Flush all page to disk.
+     *
+     * @param sync synchronous operation.
+     */
     base::Status Flush(bool sync);
 
     /**
@@ -67,6 +73,14 @@ public:
      * @return used-blocks / pages
      */
     inline float ApproximateLargeRatio() const;
+
+    /**
+     * Approximate the space usage ratio: all-blocks / used-blocs
+     * This means:
+     *     == 1: all blocks be used.
+     *     >  1: not all blocks be used.
+     */
+    inline float ApproximateUsageRatio() const;
 
     //--------------------------------------------------------------------------
     // Testing:
@@ -146,7 +160,7 @@ private:
     uint64_t file_size_ = 0;
     uint64_t next_page_id_ = 0;
 
-    std::vector<uint32_t> bitmap_;
+    util::Bitmap<uint32_t> bitmap_;
 
     // page_id -> physical address
     std::unordered_map<uint64_t, uint64_t> id_map_;

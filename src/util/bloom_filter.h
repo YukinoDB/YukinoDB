@@ -21,8 +21,8 @@ public:
 
     Bitmap(int num_bits)
         : num_bits_(num_bits)
-        , bitmap_(capacity(num_bits), Bucket(0)) {
-        DCHECK_GT(num_bits_, 0);
+        , buckets_(capacity(num_bits), Bucket(0)) {
+        //DCHECK_GT(num_bits_, 0);
     }
 
     static inline size_t capacity(int num_bits) {
@@ -31,28 +31,40 @@ public:
 
     bool test(int i) const {
         DCHECK_LT(i, num_bits_);
-        return bitmap_[i / kBitWide] & (1U << (i % kBitWide));
+        return buckets_[i / kBitWide] & (1U << (i % kBitWide));
     }
 
     void set(int i) {
         DCHECK_LT(i, num_bits_);
-        bitmap_[i / kBitWide] |= (1U << (i % kBitWide));
+        buckets_[i / kBitWide] |= (1U << (i % kBitWide));
     }
 
     void unset(int i) {
         DCHECK_LT(i, num_bits_);
-        bitmap_[i / kBitWide] &= ~(1U << (i % kBitWide));
+        buckets_[i / kBitWide] &= ~(1U << (i % kBitWide));
     }
 
-    const std::vector<Bucket> &bits() const { return bitmap_; }
+    void Resize(int num_bits) {
+        buckets_.resize(capacity(num_bits), Bucket(0));
+        num_bits_ = num_bits;
+    }
+
+    void AddBucket(Bucket bucket) {
+        num_bits_ += kBitWide;
+        buckets_.push_back(bucket);
+    }
+
+    const std::vector<Bucket> &bits() const { return buckets_; }
 
     int num_bits() const { return num_bits_; }
+
+    size_t num_buckets() const { return buckets_.size(); }
 
     static constexpr const int kBitWide = sizeof(Bucket) * 8;
 
 private:
-    const int num_bits_;
-    std::vector<Bucket> bitmap_;
+    int num_bits_;
+    std::vector<Bucket> buckets_;
 };
 
 struct DefaultBloomFilterPolicy {

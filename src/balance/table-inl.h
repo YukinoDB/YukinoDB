@@ -17,20 +17,17 @@ inline uint64_t Table::Addr2Index(uint64_t addr) {
 
 inline bool Table::TestUsed(uint64_t addr) {
     auto i = Addr2Index(addr);
-    DCHECK_LT(i / 32, bitmap_.size());
-    return bitmap_[i / 32] & (1 << (i % 32));
+    return bitmap_.test(static_cast<int>(i));
 }
 
 inline void Table::SetUsed(uint64_t addr) {
     auto i = Addr2Index(addr);
-    DCHECK_LT(i / 32, bitmap_.size());
-    bitmap_[i / 32] |= (1 << (i % 32));
+    bitmap_.set(static_cast<int>(i));
 }
 
 inline void Table::ClearUsed(uint64_t addr) {
     auto i = Addr2Index(addr);
-    DCHECK_LT((i + 31) / 32, bitmap_.size());
-    bitmap_[i / 32] &= ~(1 << (i % 32));
+    return bitmap_.unset(static_cast<int>(i));
 }
 
 inline Table::PageTy *Table::AllocatePage(int num_entries) {
@@ -56,14 +53,25 @@ inline int Table::Comparator::operator()(const char *a, const char *b) const {
 }
 
 inline float Table::ApproximateLargeRatio() const {
-    float num_pages = static_cast<float>(id_map_.size());
+    auto num_pages = static_cast<float>(id_map_.size());
     float num_blocks = 0;
 
-    for (auto bits : bitmap_) {
+    for (auto bits : bitmap_.bits()) {
         num_blocks += base::Bits::CountOne32(bits);
     }
     DCHECK_NE(0, num_pages);
     return num_blocks / num_pages;
+}
+
+inline float Table::ApproximateUsageRatio() const {
+    auto num_blocks = static_cast<float>(file_size_ / page_size_ - 1);
+    float num_used_blocks = 0;
+
+    for (auto bits : bitmap_.bits()) {
+        num_used_blocks += base::Bits::CountOne32(bits);
+    }
+    DCHECK_NE(0, num_used_blocks);
+    return num_used_blocks / num_blocks;
 }
 
 namespace {
