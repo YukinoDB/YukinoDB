@@ -19,9 +19,13 @@ public:
     static uint64_t Decode(const void *buf, size_t *len);
 
     static size_t Sizeof(uint64_t value) {
-        return (64 - YK_CLZ64(value) + 6) / 7;
+        if (value == 0) {
+            return 1;
+        } else {
+            return (64 - Bits::CountLeadingZeros64(value) + 6) / 7;
+        }
     }
-    
+
     static const size_t kMaxLen = 10;
 };
 
@@ -37,7 +41,11 @@ public:
     }
 
     static size_t Sizeof(uint32_t value) {
-        return (32 - YK_CLZ32(value) + 6) / 7;
+        if (value == 0) {
+            return 1;
+        } else {
+            return (32 - Bits::CountLeadingZeros32(value) + 6) / 7;
+        }
     }
 
     static const size_t kMaxLen =  5;

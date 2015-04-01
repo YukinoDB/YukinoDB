@@ -50,13 +50,6 @@ struct Strings final {
     ~Strings() = delete;
 };
 
-// clz - count leading zero
-#define YK_CLZ64(n)  \
-    (!(( n ) & 0xffffffff00000000ull) ? \
-        32 + YK_CLZ32(( n )) : YK_CLZ32((( n ) & 0xffffffff00000000ull) >> 32))
-
-#define YK_CLZ32(n) __builtin_clz((uint32_t)( n ))
-
 struct Bits final {
 
     // Fast find first zero, right to left
@@ -70,23 +63,46 @@ struct Bits final {
         };
 
         int base = 0;
-        if ((x & 0xffff) == 0xffffu) {
-            base += 16;
-            x >>= 16;
-        }
-        if ((x & 0xff) == 0xffu) {
-            base += 8;
-            x >>= 8;
-        }
-        if ((x & 0xf) == 0xfu) {
-            base += 4;
-            x >>= 4;
-        }
-        return base + zval[x & 0xfu];
+        if ((x & 0x0000FFFF) == 0x0000FFFFU) { base += 16; x >>= 16; }
+        if ((x & 0x000000FF) == 0x000000FFU) { base +=  8; x >>=  8; }
+        if ((x & 0x0000000F) == 0x0000000FU) { base +=  4; x >>=  4; }
+        return base + zval[x & 0xFU];
     }
 
     /**
-     * Count bit 1 from uint32_t integer.
+     * Count left bit 0 from 32 bits integer.
+     */
+    static inline int CountLeadingZeros32(uint32_t x) {
+        static const int zval[16] = {
+            4, /* 0 */ 3, /* 1 */ 2, /* 2 */ 2, /* 3 */
+            1, /* 4 */ 1, /* 5 */ 1, /* 6 */ 1, /* 7 */
+            0, /* 8 */ 0, /* 9 */ 0, /* A */ 0, /* B */
+            0, /* C */ 0, /* D */ 0, /* E */ 0  /* F */
+        };
+        int n = 0;
+        if ((x & 0xFFFF0000) == 0) {n  = 16; x <<= 16;} else {n = 0;}
+        if ((x & 0xFF000000) == 0) {n +=  8; x <<=  8;}
+        if ((x & 0xF0000000) == 0) {n +=  4; x <<=  4;}
+        n += zval[x >> (32-4)];
+        return n;
+    }
+
+    /**
+     * Count right bit 0 from 32 bits integer.
+     */
+    static inline int CountTrailingZeros32(uint32_t x) {
+        if (x == 0) return 32;
+        auto n = 0;
+        if ((x & 0x0000FFFF) == 0) { n += 16; x >>= 16; }
+        if ((x & 0x000000FF) == 0) { n +=  8; x >>=  8; }
+        if ((x & 0x0000000F) == 0) { n +=  4; x >>=  4; }
+        if ((x & 0x00000003) == 0) { n +=  2; x >>=  2; }
+        if ((x & 0x00000001) == 0) { n +=  1; }
+        return n;
+    }
+
+    /**
+     * Count bit 1 from 32 bits integer.
      */
     static inline int CountOne32(uint32_t x) {
         x = ((0xaaaaaaaa & x) >> 1) + (0x55555555 & x);
@@ -96,6 +112,30 @@ struct Bits final {
         x = ((0xffff0000 & x) >>16) + (0x0000ffff & x);
         
         return static_cast<int>(x);
+    }
+
+    /**
+     * Count left bit 1 from 64 bits integer.
+     */
+    static inline int CountLeadingZeros64(uint64_t x) {
+        if ((x & 0xFFFFFFFF00000000ULL) == 0) {
+            return 32 + CountLeadingZeros32(static_cast<uint32_t>(x));
+        } else {
+            x = (x & 0xFFFFFFFF00000000ULL) >> 32;
+            return CountLeadingZeros32(static_cast<uint32_t>(x));
+        }
+    }
+
+    /**
+     * Count right bit 1 from 64 bits integer.
+     */
+    static inline int CountTrailingZeros64(uint64_t x) {
+        if ((x & 0x00000000FFFFFFFFULL) == 0) {
+            x = (x & 0x00000000FFFFFFFFULL) << 32;
+            return 32 + CountTrailingZeros32(static_cast<uint32_t>(x));
+        } else {
+            return CountTrailingZeros32(static_cast<uint32_t>(x));
+        }
     }
 
     Bits() = delete;

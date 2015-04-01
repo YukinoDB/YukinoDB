@@ -1,3 +1,4 @@
+#include "base/varint_encoding.h"
 #include "base/mem_io.h"
 #include "base/base.h"
 #include "gtest/gtest.h"
@@ -20,6 +21,23 @@ TEST(BaseTest, FindFirstZero) {
     EXPECT_EQ(4, Bits::FindFirstZero32(0xffffffefu));
     EXPECT_EQ(12, Bits::FindFirstZero32(0xffffefffu));
     EXPECT_EQ(24, Bits::FindFirstZero32(0xfeffffffu));
+}
+
+TEST(BaseTest, CountLeadingZeros) {
+    EXPECT_EQ(32, Bits::CountLeadingZeros32(0));
+    uint32_t x = 0;
+    for (auto i = 0; i < 32; ++i) {
+        x |= (1U << i);
+        EXPECT_EQ(31 - i, Bits::CountLeadingZeros32(x));
+    }
+}
+
+TEST(BaseTest, VarintSizeof) {
+    EXPECT_EQ(1, Varint32::Sizeof(0));
+    EXPECT_EQ(1, Varint32::Sizeof(1));
+    EXPECT_EQ(1, Varint32::Sizeof(1U << 6));
+
+    EXPECT_EQ(2, Varint32::Sizeof(1U << 7));
 }
 
 TEST(BaseTest, StringIO) {
