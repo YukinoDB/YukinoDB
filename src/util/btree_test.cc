@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <functional>
 #include <vector>
+#include <random>
 
 namespace yukino {
 
@@ -36,6 +37,54 @@ public:
         int old = 0;
         for (auto key : keys) {
             tree->Put(key, &old);
+        }
+    }
+
+    static std::string ToString(const IntTree::Page &page) {
+        std::string buf("[");
+
+        for (const auto &entry : page.entries) {
+            buf.append(base::Strings::Sprintf("%d, ", entry.key));
+        }
+        buf.append("]");
+        return buf;
+    }
+
+    bool CheckPageParent(const IntTree &tree) {
+        return tree.Travel(tree.TEST_GetRoot(), [this](IntTree::Page *page) {
+            auto rv = true;
+            if (!page->is_leaf()) {
+                if (page->link) {
+                    if (page->link->parent.page != page) {
+                        DLOG(INFO) << "link hit is leaf: " << page->link->is_leaf();
+                        DLOG(INFO) << "page: " << this->ToString(*page);
+                        DLOG(INFO) << "link: " << this->ToString(*page->link);
+                        return false;
+                    }
+                }
+
+                for (const auto &entry : page->entries) {
+                    if (entry.link->parent.page != page) {
+                        DLOG(INFO) << "entry hit";
+                        return false;
+                    }
+                }
+            }
+            return rv;
+        });
+    }
+
+    static void ShuffleArray(std::vector<int> *arr) {
+        std::uniform_int_distribution<size_t> distribution(0, arr->size());
+        std::mt19937 engine;
+        auto rand = std::bind(distribution, engine);
+
+        auto i = static_cast<int>(arr->size());
+        while ( --i ) {
+            auto j = rand() % (i + 1);
+            auto temp = (*arr)[i];
+            (*arr)[i] = (*arr)[j];
+            (*arr)[j] = temp;
         }
     }
 };
@@ -448,6 +497,34 @@ TEST_F(BTreeTest, LargePuting) {
     for (iter.SeekToFirst(); iter.Valid(); iter.Next()) {
         ASSERT_EQ(i, iter.key());
         ++i;
+    }
+
+    for (auto i = 0; i < k; ++i) {
+        iter.Seek(i);
+        ASSERT_EQ(i, iter.key());
+    }
+}
+
+TEST_F(BTreeTest, FuzzyPutting) {
+    IntTree tree(127, int_comparator);
+
+    static const auto k = 100000;
+    std::vector<int> arr(k);
+    for (auto i = 0; i < k; ++i) {
+        arr[i] = i;
+    }
+    ShuffleArray(&arr);
+
+    int dummy = 0;
+    for (auto i : arr) {
+        ASSERT_FALSE(tree.Put(i, &dummy)) << i;
+    }
+
+    IntTree::Iterator iter(&tree);
+    for (auto i = 0; i < k; ++i) {
+        iter.Seek(i);
+        ASSERT_TRUE(iter.Valid()) << i;
+        ASSERT_EQ(i, iter.key());
     }
 }
 

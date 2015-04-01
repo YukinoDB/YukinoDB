@@ -559,6 +559,8 @@ void BTree<Key, Comparator, Allocator>::SplitLeaf(Page *page) {
     auto entry = parent->Put(page->back(), comparator_);
     parent->SetLChild(entry, page);
     parent->SetRChild(entry, sibling);
+
+    DCHECK_EQ(sibling->parent.page, parent);
     if (parent->size() > PageMaxSize(parent)) {
         SplitNonLeaf(parent);
     }
@@ -583,6 +585,8 @@ void BTree<Key, Comparator, Allocator>::SplitNonLeaf(Page *page) {
 
     sibling->parent.page = parent;
     sibling->link = page->link;
+
+    // NOTICE: Ensure sibling's children parent pointer.
     sibling->link->parent.page = sibling;
     page->MoveTo(-num_entries, sibling, comparator_);
 
@@ -591,6 +595,10 @@ void BTree<Key, Comparator, Allocator>::SplitNonLeaf(Page *page) {
     parent->SetLChild(entry, page);
     parent->SetRChild(entry, sibling);
 
+    // NOTICE: Ensure page's children parent pointer.
+    page->link->parent.page = page;
+
+    DCHECK_EQ(sibling->parent.page, parent);
     if (parent->size() > PageMaxSize(parent)) {
         SplitNonLeaf(parent);
     }
