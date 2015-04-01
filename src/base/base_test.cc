@@ -32,6 +32,16 @@ TEST(BaseTest, CountLeadingZeros) {
     }
 }
 
+TEST(BaseTest, FindFirstOne) {
+    EXPECT_EQ(32, Bits::FindFirstOne32(0));
+    EXPECT_EQ(31, Bits::FindFirstOne32(1U << 31));
+    EXPECT_EQ(15, Bits::FindFirstOne32(0x80008000));
+
+    for (auto i = 0; i < 32; ++i) {
+        EXPECT_EQ(i, Bits::FindFirstOne32(1U << i));
+    }
+}
+
 TEST(BaseTest, VarintSizeof) {
     EXPECT_EQ(1, Varint32::Sizeof(0));
     EXPECT_EQ(1, Varint32::Sizeof(1));

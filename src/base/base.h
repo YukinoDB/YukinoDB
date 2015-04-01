@@ -70,6 +70,24 @@ struct Bits final {
     }
 
     /**
+     * Find first one, right to left.
+     */
+    static inline int FindFirstOne32(uint32_t x) {
+        static const int oval[16] = {
+            4, /* 0 */ 0, /* 1 */ 1, /* 2 */ 0, /* 3 */
+            2, /* 4 */ 0, /* 5 */ 1, /* 6 */ 0, /* 7 */
+            3, /* 8 */ 0, /* 9 */ 1, /* A */ 0, /* B */
+            2, /* C */ 0, /* D */ 1, /* E */ 0, /* F */
+        };
+
+        auto base = 0;
+        if ((x & 0x0000FFFF) == 0) { base += 16; x >>= 16; }
+        if ((x & 0x000000FF) == 0) { base += 8;  x >>=  8; }
+        if ((x & 0x0000000F) == 0) { base += 4;  x >>=  4; }
+        return base + oval[x & 0xF];
+    }
+
+    /**
      * Count left bit 0 from 32 bits integer.
      */
     static inline int CountLeadingZeros32(uint32_t x) {
@@ -79,12 +97,12 @@ struct Bits final {
             0, /* 8 */ 0, /* 9 */ 0, /* A */ 0, /* B */
             0, /* C */ 0, /* D */ 0, /* E */ 0  /* F */
         };
-        int n = 0;
-        if ((x & 0xFFFF0000) == 0) {n  = 16; x <<= 16;} else {n = 0;}
-        if ((x & 0xFF000000) == 0) {n +=  8; x <<=  8;}
-        if ((x & 0xF0000000) == 0) {n +=  4; x <<=  4;}
-        n += zval[x >> (32-4)];
-        return n;
+
+        int base = 0;
+        if ((x & 0xFFFF0000) == 0) {base  = 16; x <<= 16;} else {base = 0;}
+        if ((x & 0xFF000000) == 0) {base +=  8; x <<=  8;}
+        if ((x & 0xF0000000) == 0) {base +=  4; x <<=  4;}
+        return base + zval[x >> (32-4)];
     }
 
     /**
