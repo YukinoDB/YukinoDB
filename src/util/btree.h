@@ -392,9 +392,7 @@ public:
         DCHECK(Valid());
 
         if (local_ - 1 < 0) {
-            auto rv = owns_->FindLessThan(page_->key(0));
-            page_ = std::get<0>(rv);
-            local_ = std::get<1>(rv);
+            std::tie(page_, local_) = owns_->FindLessThan(page_->key(0));
         } else {
             local_--;
         }
@@ -482,7 +480,7 @@ BTree<Key, Comparator, Allocator>::FindLessThan(const Key &key) const {
             page = nullptr;
         }
     }
-    return std::make_tuple(page, i);
+    return {page, i};
 }
 
 template<class Key, class Comparator, class Allocator>
@@ -493,7 +491,7 @@ BTree<Key, Comparator, Allocator>::FindGreaterOrEqual(const Key &key) const {
     if (i < 0) {
         page = nullptr;
     }
-    return std::make_tuple(page, i);
+    return {page, i};
 }
 
 template<class Key, class Comparator, class Allocator>
@@ -622,8 +620,7 @@ void BTree<Key, Comparator, Allocator>::RemoveLeaf(const Key &hint, Page *page) 
         return;
     }
 
-    auto rv = FindLessThan(hint);
-    auto prev = std::get<0>(rv);
+    auto prev = std::get<0>(FindLessThan(hint));
     if (prev) {
         prev->link = page->link;
         prev->dirty++;
