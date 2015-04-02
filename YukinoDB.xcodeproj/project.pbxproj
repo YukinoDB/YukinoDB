@@ -41,9 +41,7 @@
 		23AF172C1ACC3B6900066178 /* redo_log.cc in Sources */ = {isa = PBXBuildFile; fileRef = 23AF172B1ACC3B6900066178 /* redo_log.cc */; };
 		23B694E91A82207300E711E4 /* db.cc in Sources */ = {isa = PBXBuildFile; fileRef = 23B694DB1A82207300E711E4 /* db.cc */; };
 		23B694EA1A82207300E711E4 /* options.cc in Sources */ = {isa = PBXBuildFile; fileRef = 23B694DE1A82207300E711E4 /* options.cc */; };
-		23B694EB1A82207300E711E4 /* read_options.cc in Sources */ = {isa = PBXBuildFile; fileRef = 23B694E01A82207300E711E4 /* read_options.cc */; };
 		23B694EC1A82207300E711E4 /* status.cc in Sources */ = {isa = PBXBuildFile; fileRef = 23B694E31A82207300E711E4 /* status.cc */; };
-		23B694ED1A82207300E711E4 /* write_options.cc in Sources */ = {isa = PBXBuildFile; fileRef = 23B694E71A82207300E711E4 /* write_options.cc */; };
 		23B694F11A831BCA00E711E4 /* crc32.c in Sources */ = {isa = PBXBuildFile; fileRef = 23B694F01A831BCA00E711E4 /* crc32.c */; };
 		23B694F41A831CCE00E711E4 /* crc32.cc in Sources */ = {isa = PBXBuildFile; fileRef = 23B694F31A831CCE00E711E4 /* crc32.cc */; };
 		23CD83DD1A834AA800D64229 /* crc32_test.cc in Sources */ = {isa = PBXBuildFile; fileRef = 23CD83DC1A834AA800D64229 /* crc32_test.cc */; };
@@ -215,14 +213,10 @@
 		23B694DD1A82207300E711E4 /* env.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = env.h; sourceTree = "<group>"; };
 		23B694DE1A82207300E711E4 /* options.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = options.cc; sourceTree = "<group>"; };
 		23B694DF1A82207300E711E4 /* options.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = options.h; sourceTree = "<group>"; };
-		23B694E01A82207300E711E4 /* read_options.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = read_options.cc; sourceTree = "<group>"; };
-		23B694E11A82207300E711E4 /* read_options.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = read_options.h; sourceTree = "<group>"; };
 		23B694E21A82207300E711E4 /* slice.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = slice.h; sourceTree = "<group>"; };
 		23B694E31A82207300E711E4 /* status.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = status.cc; sourceTree = "<group>"; };
 		23B694E41A82207300E711E4 /* status.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = status.h; sourceTree = "<group>"; };
 		23B694E61A82207300E711E4 /* write_batch.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = write_batch.h; sourceTree = "<group>"; };
-		23B694E71A82207300E711E4 /* write_options.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = write_options.cc; sourceTree = "<group>"; };
-		23B694E81A82207300E711E4 /* write_options.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = write_options.h; sourceTree = "<group>"; };
 		23B694EE1A82209500E711E4 /* table_builder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = table_builder.h; sourceTree = "<group>"; };
 		23B694EF1A83196900E711E4 /* io.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = io.h; sourceTree = "<group>"; };
 		23B694F01A831BCA00E711E4 /* crc32.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = crc32.c; sourceTree = "<group>"; };
@@ -332,12 +326,8 @@
 				2304D8CB1AA7F703004C8251 /* env.cc */,
 				23B694DE1A82207300E711E4 /* options.cc */,
 				23B694DF1A82207300E711E4 /* options.h */,
-				23B694E01A82207300E711E4 /* read_options.cc */,
-				23B694E11A82207300E711E4 /* read_options.h */,
 				23B694E61A82207300E711E4 /* write_batch.h */,
 				237ECB121AA9E56300EF7FB1 /* write_batch.cc */,
-				23B694E71A82207300E711E4 /* write_options.cc */,
-				23B694E81A82207300E711E4 /* write_options.h */,
 				23CD83F61A89D30000D64229 /* iterator.h */,
 				23CD83F71A89D3FD00D64229 /* iterator.cc */,
 			);
@@ -618,13 +608,11 @@
 				23B694EA1A82207300E711E4 /* options.cc in Sources */,
 				237F99431AB1BE0E0063BF2C /* version_test.cc in Sources */,
 				237ECB131AA9E56300EF7FB1 /* write_batch.cc in Sources */,
-				23B694EB1A82207300E711E4 /* read_options.cc in Sources */,
 				23CD83FD1A8A09DF00D64229 /* comparator.cc in Sources */,
 				23681CB81A9F5E70002721BE /* memory_table.cc in Sources */,
 				23CD83F81A89D3FD00D64229 /* iterator.cc in Sources */,
 				2304D8E01AA80815004C8251 /* env_impl_posix.cc in Sources */,
 				2315D6211AC590130022E1E9 /* format.cc in Sources */,
-				23B694ED1A82207300E711E4 /* write_options.cc in Sources */,
 				2304D8CC1AA7F703004C8251 /* env.cc in Sources */,
 				23B694F11A831BCA00E711E4 /* crc32.c in Sources */,
 				237ECB071AA9DB7C00EF7FB1 /* db_impl.cc in Sources */,

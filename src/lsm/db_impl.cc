@@ -10,8 +10,6 @@
 #include "yukino/iterator.h"
 #include "yukino/write_batch.h"
 #include "yukino/options.h"
-#include "yukino/read_options.h"
-#include "yukino/write_options.h"
 #include "yukino/env.h"
 #include "glog/logging.h"
 #include <chrono>

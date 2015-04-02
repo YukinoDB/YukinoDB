@@ -16,4 +16,14 @@ Options::Options()
     , max_open_files(1000) {
 }
 
+ReadOptions::ReadOptions()
+    : verify_checksums(true)
+    , fill_cache(true)
+    , snapshot(nullptr) {
+}
+
+WriteOptions::WriteOptions()
+    : sync(false) {
+}
+
 } // namespace yukino
