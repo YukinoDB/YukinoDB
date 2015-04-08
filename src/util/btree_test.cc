@@ -50,29 +50,29 @@ public:
         return buf;
     }
 
-    bool CheckPageParent(const IntTree &tree) {
-        return tree.Travel(tree.TEST_GetRoot(), [this](IntTree::Page *page) {
-            auto rv = true;
-            if (!page->is_leaf()) {
-                if (page->link) {
-                    if (page->link->parent.page != page) {
-                        DLOG(INFO) << "link hit is leaf: " << page->link->is_leaf();
-                        DLOG(INFO) << "page: " << this->ToString(*page);
-                        DLOG(INFO) << "link: " << this->ToString(*page->link);
-                        return false;
-                    }
-                }
-
-                for (const auto &entry : page->entries) {
-                    if (entry.link->parent.page != page) {
-                        DLOG(INFO) << "entry hit";
-                        return false;
-                    }
-                }
-            }
-            return rv;
-        });
-    }
+//    bool CheckPageParent(const IntTree &tree) {
+//        return tree.Travel(tree.TEST_GetRoot(), [this](IntTree::Page *page) {
+//            auto rv = true;
+//            if (!page->is_leaf()) {
+//                if (page->link) {
+//                    if (page->link->parent.page != page) {
+//                        DLOG(INFO) << "link hit is leaf: " << page->link->is_leaf();
+//                        DLOG(INFO) << "page: " << this->ToString(*page);
+//                        DLOG(INFO) << "link: " << this->ToString(*page->link);
+//                        return false;
+//                    }
+//                }
+//
+//                for (const auto &entry : page->entries) {
+//                    if (entry.link->parent.page != page) {
+//                        DLOG(INFO) << "entry hit";
+//                        return false;
+//                    }
+//                }
+//            }
+//            return rv;
+//        });
+//    }
 
     static void ShuffleArray(std::vector<int> *arr) {
         std::uniform_int_distribution<size_t> distribution(0, arr->size());
@@ -92,52 +92,52 @@ public:
 TEST_F(BTreeTest, Sanity) {
     IntTree::Page page(0, 3);
 
-    page.Put(3, nullptr, int_comparator);
-    page.Put(1, nullptr, int_comparator);
-    page.Put(2, nullptr, int_comparator);
+    page.Put(3, 0, int_comparator);
+    page.Put(1, 0, int_comparator);
+    page.Put(2, 0, int_comparator);
 
     EXPECT_EQ(1, page.entries[0].key);
     EXPECT_EQ(2, page.entries[1].key);
     EXPECT_EQ(3, page.entries[2].key);
 }
 
-TEST_F(BTreeTest, PageFrontMovement) {
-    IntTree::Page page(0, 4), dest(1, 3);
+//TEST_F(BTreeTest, PageFrontMovement) {
+//    IntTree::Page page(0, 4), dest(1, 3);
+//
+//    page.Put(3, nullptr, int_comparator);
+//    page.Put(1, nullptr, int_comparator);
+//    page.Put(2, nullptr, int_comparator);
+//    page.Put(4, nullptr, int_comparator);
+//
+//    auto entry = page.MoveTo(2, &dest, int_comparator);
+//    EXPECT_EQ(2, entry->key);
+//    EXPECT_EQ(2, page.size());
+//    EXPECT_EQ(2, dest.size());
+//
+//    EXPECT_EQ(1, dest.entries[0].key);
+//    EXPECT_EQ(2, dest.entries[1].key);
+//    EXPECT_EQ(3, page.entries[0].key);
+//    EXPECT_EQ(4, page.entries[1].key);
+//}
 
-    page.Put(3, nullptr, int_comparator);
-    page.Put(1, nullptr, int_comparator);
-    page.Put(2, nullptr, int_comparator);
-    page.Put(4, nullptr, int_comparator);
-
-    auto entry = page.MoveTo(2, &dest, int_comparator);
-    EXPECT_EQ(2, entry->key);
-    EXPECT_EQ(2, page.size());
-    EXPECT_EQ(2, dest.size());
-
-    EXPECT_EQ(1, dest.entries[0].key);
-    EXPECT_EQ(2, dest.entries[1].key);
-    EXPECT_EQ(3, page.entries[0].key);
-    EXPECT_EQ(4, page.entries[1].key);
-}
-
-TEST_F(BTreeTest, PageBackMovement) {
-    IntTree::Page page(0, 4), dest(1, 3);
-
-    page.Put(3, nullptr, int_comparator);
-    page.Put(1, nullptr, int_comparator);
-    page.Put(2, nullptr, int_comparator);
-    page.Put(4, nullptr, int_comparator);
-
-    auto entry = page.MoveTo(-2, &dest, int_comparator);
-    EXPECT_EQ(4, entry->key);
-    EXPECT_EQ(2, page.size());
-    EXPECT_EQ(2, dest.size());
-
-    EXPECT_EQ(1, page.entries[0].key);
-    EXPECT_EQ(2, page.entries[1].key);
-    EXPECT_EQ(3, dest.entries[0].key);
-    EXPECT_EQ(4, dest.entries[1].key);
-}
+//TEST_F(BTreeTest, PageBackMovement) {
+//    IntTree::Page page(0, 4), dest(1, 3);
+//
+//    page.Put(3, nullptr, int_comparator);
+//    page.Put(1, nullptr, int_comparator);
+//    page.Put(2, nullptr, int_comparator);
+//    page.Put(4, nullptr, int_comparator);
+//
+//    auto entry = page.MoveTo(-2, &dest, int_comparator);
+//    EXPECT_EQ(4, entry->key);
+//    EXPECT_EQ(2, page.size());
+//    EXPECT_EQ(2, dest.size());
+//
+//    EXPECT_EQ(1, page.entries[0].key);
+//    EXPECT_EQ(2, page.entries[1].key);
+//    EXPECT_EQ(3, dest.entries[0].key);
+//    EXPECT_EQ(4, dest.entries[1].key);
+//}
 
 TEST_F(BTreeTest, TreeSplitLeafPut) {
     IntTree tree(3, int_comparator);
@@ -158,13 +158,13 @@ TEST_F(BTreeTest, TreeSplitLeafPut) {
     ASSERT_EQ(1, page->size());
     EXPECT_EQ(3, page->key(0));
 
-    page = page->entries[0].link;
+    page = tree.GetPage(page->entries[0].link);
     ASSERT_EQ(2, page->size());
     EXPECT_EQ(1, page->key(0));
     EXPECT_EQ(3, page->key(1));
 
     page = tree.TEST_GetRoot();
-    page = page->link;
+    page = tree.GetPage(page->link);
     ASSERT_EQ(2, page->size());
     EXPECT_EQ(4, page->key(0));
     EXPECT_EQ(5, page->key(1));
@@ -203,17 +203,17 @@ TEST_F(BTreeTest, TreeSplitLeafPut2) {
     EXPECT_EQ(2, page->key(0));
     EXPECT_EQ(3, page->key(1));
 
-    page = page->child(0);
+    page = tree.GetPage(page->child(0));
     ASSERT_EQ(3, page->size());
     EXPECT_EQ(0, page->key(0));
     EXPECT_EQ(1, page->key(1));
     EXPECT_EQ(2, page->key(2));
 
-    page = tree.TEST_GetRoot()->child(1);
+    page = tree.GetPage(tree.TEST_GetRoot()->child(1));
     ASSERT_EQ(1, page->size());
     EXPECT_EQ(3, page->key(0));
 
-    page = tree.TEST_GetRoot()->link;
+    page = tree.GetPage(tree.TEST_GetRoot()->link);
     ASSERT_EQ(2, page->size());
     EXPECT_EQ(4, page->key(0));
     EXPECT_EQ(5, page->key(1));
@@ -245,11 +245,11 @@ TEST_F(BTreeTest, TreeSplitNonLeafPut) {
     ASSERT_EQ(1, page->size());
     EXPECT_EQ(3, page->key(0));
 
-    page = page->child(0);
+    page = tree.GetPage(page->child(0));
     ASSERT_EQ(1, page->size());
     EXPECT_EQ(2, page->key(0));
 
-    page = tree.TEST_GetRoot()->link;
+    page = tree.GetPage(tree.TEST_GetRoot()->link);
     ASSERT_EQ(2, page->size());
     EXPECT_EQ(5, page->key(0));
     EXPECT_EQ(7, page->key(1));
@@ -389,22 +389,22 @@ TEST_F(BTreeTest, DeleteFrontLeaf) {
     EXPECT_EQ(5, page->key(1));
     EXPECT_EQ(11, page->key(2));
 
-    page = tree.TEST_GetRoot()->child(0);
+    page = tree.GetPage(tree.TEST_GetRoot()->child(0));
     ASSERT_EQ(2, page->size());
     EXPECT_EQ(2, page->key(0));
     EXPECT_EQ(3, page->key(1));
 
-    page = tree.TEST_GetRoot()->child(1);
+    page = tree.GetPage(tree.TEST_GetRoot()->child(1));
     ASSERT_EQ(2, page->size());
     EXPECT_EQ(4, page->key(0));
     EXPECT_EQ(5, page->key(1));
 
-    page = tree.TEST_GetRoot()->child(2);
+    page = tree.GetPage(tree.TEST_GetRoot()->child(2));
     ASSERT_EQ(2, page->size());
     EXPECT_EQ(6, page->key(0));
     EXPECT_EQ(11, page->key(1));
 
-    page = tree.TEST_GetRoot()->link;
+    page = tree.GetPage(tree.TEST_GetRoot()->link);
     ASSERT_EQ(2, page->size());
     EXPECT_EQ(13, page->key(0));
     EXPECT_EQ(17, page->key(1));
@@ -433,30 +433,30 @@ TEST_F(BTreeTest, DeleteMiddleLeaf) {
     ASSERT_EQ(1, page->size());
     EXPECT_EQ(3, page->key(0));
 
-    page = tree.TEST_GetRoot()->child(0);
+    page = tree.GetPage(tree.TEST_GetRoot()->child(0));
     ASSERT_EQ(1, page->size());
     EXPECT_EQ(1, page->key(0));
 
-    page = tree.TEST_GetRoot()->link;
+    page = tree.GetPage(tree.TEST_GetRoot()->link);
     ASSERT_EQ(1, page->size());
     EXPECT_EQ(11, page->key(0));
 
-    page = tree.TEST_GetRoot()->child(0)->child(0);
+    page = tree.GetPage(tree.GetPage(tree.TEST_GetRoot()->child(0))->child(0));
     ASSERT_EQ(2, page->size());
     EXPECT_EQ(0, page->key(0));
     EXPECT_EQ(1, page->key(1));
 
-    page = tree.TEST_GetRoot()->child(0)->link;
+    page = tree.GetPage(tree.GetPage(tree.TEST_GetRoot()->child(0))->link);
     ASSERT_EQ(2, page->size());
     EXPECT_EQ(2, page->key(0));
     EXPECT_EQ(3, page->key(1));
 
-    page = tree.TEST_GetRoot()->link->child(0);
+    page = tree.GetPage(tree.GetPage(tree.TEST_GetRoot()->link)->child(0));
     ASSERT_EQ(2, page->size());
     EXPECT_EQ(6, page->key(0));
     EXPECT_EQ(11, page->key(1));
 
-    page = tree.TEST_GetRoot()->link->link;
+    page = tree.GetPage(tree.GetPage(tree.TEST_GetRoot()->link)->link);
     ASSERT_EQ(2, page->size());
     EXPECT_EQ(13, page->key(0));
     EXPECT_EQ(17, page->key(1));
@@ -466,17 +466,17 @@ TEST_F(BTreeTest, DeleteMiddleLeaf) {
     EXPECT_EQ(0, page->key(0));
     EXPECT_EQ(1, page->key(1));
 
-    page = page->link;
+    page = tree.GetPage(page->link);
     ASSERT_EQ(2, page->size());
     EXPECT_EQ(2, page->key(0));
     EXPECT_EQ(3, page->key(1));
 
-    page = page->link;
+    page = tree.GetPage(page->link);
     ASSERT_EQ(2, page->size());
     EXPECT_EQ(6, page->key(0));
     EXPECT_EQ(11, page->key(1));
 
-    page = page->link;
+    page = tree.GetPage(page->link);
     ASSERT_EQ(2, page->size());
     EXPECT_EQ(13, page->key(0));
     EXPECT_EQ(17, page->key(1));

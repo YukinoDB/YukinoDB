@@ -34,20 +34,19 @@ inline void Table::ClearUsed(uint64_t addr) {
     return bitmap_.unset(static_cast<int>(i));
 }
 
-inline Table::PageTy *Table::AllocatePage(int num_entries) {
-    auto page_id = next_page_id_++;
-
-    auto page = new PageTy(page_id, num_entries);
-    id_map_[page_id] = 0;
-    return page;
-}
-
-inline void Table::FreePage(const PageTy *page) {
+inline void Table::FreePage(const Page *page) {
     if (page) {
         FreeRoomForPage(page->id);
         id_map_[page->id] = 0;
     }
-    delete page;
+    // TODO:
+    page->Release();
+}
+
+inline Table::Page *Table::GetPage(uint64_t id, bool cached) {
+    Page *page = nullptr;
+    auto rs = CachedGet(id, &page, cached);
+    return page;
 }
 
 inline int Table::Comparator::operator()(const char *a, const char *b) const {

@@ -25,6 +25,9 @@ struct Config final {
     // The B+tree page len is 2 byte wide.
     // So, the kMaxPageSize is max uint16_t.
     static const uint32_t kMaxPageSize = UINT16_MAX;
+    static const uint32_t kMinPageSize = 256;
+
+    static const int kHoldCachedPage = 7;
 
     Config() = delete;
     ~Config() = delete;
@@ -55,6 +58,15 @@ struct ParsedKey {
     }
 };
 
+struct PersistedKey {
+
+    // Internal key
+    base::Slice key;
+
+    // Payload value
+    base::Slice value;
+};
+
 /**
  * Internal Key-Value pair format:
  *
@@ -64,7 +76,7 @@ struct ParsedKey {
  * | tx_id    | 8 bytes
  * | value    | varint-lenght
  */
-class InternalKey {
+class InternalKey final {
 public:
 
     static ParsedKey Parse(const char *raw);
@@ -77,6 +89,9 @@ public:
 
     static const char *Pack(const base::Slice &key, uint64_t tx_id, uint8_t flag,
                             const base::Slice &value);
+
+    InternalKey() = delete;
+    ~InternalKey() = delete;
 };
 
 

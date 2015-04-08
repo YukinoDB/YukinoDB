@@ -16,6 +16,13 @@ public:
 
 }; // class DisableCopyAssign
 
+class DisableConstruct {
+public:
+    DisableConstruct() = delete;
+    ~DisableConstruct() = delete;
+
+}; // class DisableConstruct
+
 template<class Callback>
 class AtScope : public DisableCopyAssign {
 public:
@@ -25,7 +32,8 @@ public:
 
 private:
     Callback callback_;
-};
+
+}; // class AtScope
 
 template<class Callback>
 inline AtScope<Callback> Defer(Callback &&callback) {

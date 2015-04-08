@@ -11,6 +11,43 @@ namespace yukino {
 
 namespace balance {
 
+namespace {
+
+inline void InsertHead(Table::CacheEntry *h, Table::CacheEntry *x) {
+    (x)->next = (h)->next;
+    (x)->next->prev = x;
+    (x)->prev = h;
+    (h)->next = x;
+}
+
+inline void InsertTail(Table::CacheEntry *h, Table::CacheEntry *x) {
+    (x)->prev = (h)->prev;
+    (x)->prev->next = x;
+    (x)->next = h;
+    (h)->prev = x;
+}
+
+inline void Remove(Table::CacheEntry *x) {
+    (x)->next->prev = (x)->prev;
+    (x)->prev->next = (x)->next;
+}
+
+inline int Count(const Table::CacheEntry *h) {
+    auto i = 0;
+    for (auto entry = h->next; entry != h; entry = entry->next) {
+        ++i;
+    }
+    return i;
+}
+
+inline size_t ApproximatePageSize(const Table::Page *page) {
+    size_t count = 0;
+    // TODO:
+    return count;
+}
+    
+} // namespace
+
 /* Physical Layout:
  * 
  * Block:
@@ -68,29 +105,32 @@ struct PhysicalBlock {
 
 const char PhysicalBlock::kZeroHeader[PhysicalBlock::kHeaderSize] = {0};
 
-Table::Table(InternalKeyComparator comparator)
+Table::Table(InternalKeyComparator comparator, size_t max_cache_size)
     : comparator_(comparator)
-    , bitmap_(0) {
+    , bitmap_(0)
+    , cache_dummy_(nullptr)
+    , cache_purge_(nullptr)
+    , max_cache_size_(max_cache_size) {
 }
 
 Table::~Table() {
     if (tree_.get()) {
         Flush(true);
 
-        std::vector<const PageTy*> collected;
-        tree_->Travel(tree_->TEST_GetRoot(), [&collected] (const PageTy *page) {
-            collected.push_back(page);
-            return true;
-        });
-
-        for (auto page : collected) {
-            if (page->is_leaf()) {
-                for (auto entry : page->entries) {
-                    delete[] entry.key;
-                }
-            }
-            delete page;
-        }
+//        std::vector<const Page*> collected;
+//        tree_->Travel(tree_->TEST_GetRoot(), [&collected] (const Page *page) {
+//            collected.push_back(page);
+//            return true;
+//        });
+//
+//        for (auto page : collected) {
+//            if (page->is_leaf()) {
+//                for (auto entry : page->entries) {
+//                    delete[] entry.key;
+//                }
+//            }
+//            delete page;
+//        }
     }
 }
 
@@ -112,8 +152,8 @@ base::Status Table::Create(uint32_t page_size, uint32_t version, int order,
     base::Status rs;
 
     CHECK_OK(InitFile(order));
-    auto tree = new TreeTy(order, Comparator(comparator_), Allocator(this));
-    tree_ = std::unique_ptr<TreeTy>(tree);
+    auto tree = new Tree(order, Comparator(comparator_), Allocator(this));
+    tree_ = std::unique_ptr<Tree>(tree);
 
     return rs;
 }
@@ -141,8 +181,8 @@ base::Status Table::Open(base::FileIO *file, size_t file_size) {
     uint32_t order = 0;
     CHECK_OK(file_->ReadVarint32(&order, nullptr));
 
-    tree_ = std::unique_ptr<TreeTy>(new TreeTy(order, Comparator(comparator_),
-                                               Allocator(this)));
+    tree_ = std::unique_ptr<Tree>(new Tree(order, Comparator(comparator_),
+                                           Allocator(this)));
     CHECK_OK(LoadTree());
     return rs;
 }
@@ -166,7 +206,7 @@ bool Table::Put(const base::Slice &key, uint64_t tx_id, KeyFlag flag,
 }
 
 bool Table::Get(const base::Slice &key, uint64_t tx_id, std::string *value) {
-    TreeTy::Iterator iter(tree_.get());
+    Tree::Iterator iter(tree_.get());
 
     std::unique_ptr<const char[]> packed(InternalKey::Pack(key, tx_id,
                                                            kFlagFind, ""));
@@ -195,15 +235,18 @@ bool Table::Get(const base::Slice &key, uint64_t tx_id, std::string *value) {
 
 base::Status Table::Flush(bool sync) {
     base::Status rs;
-    TreeTy::Travel(tree_->TEST_GetRoot(), [this, &rs](PageTy *page) {
-        if (page->dirty && page->size() > 0) {
-            rs = WritePage(page);
+
+    for (auto entry = cache_dummy_.next; entry != &cache_dummy_;
+         entry = entry->next) {
+        if (entry->page->dirty > 0 && entry->page->size() > 0) {
+            rs = WritePage(entry->page.get());
             if (rs.ok()) {
-                page->dirty = 0;
+                entry->page->dirty = 0;
+            } else {
+                return rs;
             }
         }
-        return rs.ok();
-    });
+    }
 
     if (rs.ok() && sync) {
         file_->Sync();
@@ -215,7 +258,7 @@ namespace {
 
 class TableIterator : public Iterator {
 public:
-    TableIterator(Table::TreeTy *tree)
+    TableIterator(Table::Tree *tree)
         : iter_(tree) {
     }
 
@@ -242,7 +285,7 @@ public:
     }
 
 private:
-    Table::TreeTy::Iterator iter_;
+    Table::Tree::Iterator iter_;
 };
 
 } // namespace
@@ -257,7 +300,7 @@ Iterator *Table::CreateIterator() const {
     return iter;
 }
 
-base::Status Table::WritePage(const PageTy *page) {
+base::Status Table::WritePage(const Page *page) {
     // Double writing for page
     base::Status rs;
 
@@ -270,11 +313,11 @@ base::Status Table::WritePage(const PageTy *page) {
     }
     CHECK_OK(w.WriteFixed64(page->id));           // id
     // parent
-    CHECK_OK(w.WriteFixed64(page->parent.page ? page->parent.page->id : -1));
+    CHECK_OK(w.WriteFixed64(page->parent ? page->parent : -1));
     CHECK_OK(w.WriteFixed64(NowMicroseconds()));  // ts
 
     // link and entries
-    CHECK_OK(w.WriteVarint64(page->link ? page->link->id : -1, nullptr));
+    CHECK_OK(w.WriteVarint64(page->link ? page->link : -1, nullptr));
     CHECK_OK(w.WriteVarint32(static_cast<uint32_t>(page->size()), nullptr));
     if (page->is_leaf()) {
         for (const auto &entry : page->entries) {
@@ -287,7 +330,7 @@ base::Status Table::WritePage(const PageTy *page) {
         for (const auto &entry : page->entries) {
             auto parsed = InternalKey::Parse(entry.key);
 
-            CHECK_OK(w.WriteVarint64(entry.link->id, nullptr));
+            CHECK_OK(w.WriteVarint64(entry.link, nullptr));
             CHECK_OK(w.WriteString(parsed.key(), nullptr));
         }
     }
@@ -488,11 +531,10 @@ base::Status Table::LoadTree() {
     base::Status rs;
 
     uint64_t root_id = -1;
-    std::map<uint64_t, PageMetadata> metadatas;
     for (auto addr = page_size_; addr < file_size_; addr += page_size_) {
-        ScanPage(&metadatas, addr);
+        ScanPage(addr);
     }
-    for (const auto &entry : metadatas) {
+    for (const auto &entry : metadata_) {
         if (entry.second.parent == -1) {
             if (root_id != -1) {
                 return base::Status::Corruption("Double root pages!");
@@ -508,31 +550,22 @@ base::Status Table::LoadTree() {
         return base::Status::Corruption("No any root page!");
     }
 
-    PageTy *root = nullptr;
-    CHECK_OK(ReadTreePage(&metadatas, root_id, &root));
+    // Clear cache first, has a unused root page.
+    cache_map_.clear();
+    auto purge = cache_dummy_.next;
+    Remove(purge);
+    delete purge;
+
+
+    Page *root = nullptr;
+    CHECK_OK(CachedGet(root_id, &root, true));
     tree_->TEST_Attach(root);
-
-    // Release repeated memory.
-    TreeTy::Iterator iter(tree_.get());
-    tree_->Travel(tree_->TEST_GetRoot(), [this, &iter] (PageTy *page) {
-        if (!page->is_leaf()) {
-            for (auto &entry : page->entries) {
-                iter.Seek(entry.key);
-                DCHECK(iter.Valid());
-
-                delete[] entry.key;
-                entry.key = iter.key();
-            }
-        }
-        return true;
-    });
 
     next_page_id_++;
     return rs;
 }
 
-base::Status Table::ScanPage(std::map<uint64_t, PageMetadata> *metadatas,
-                             uint64_t addr) {
+base::Status Table::ScanPage(uint64_t addr) {
     base::Status rs;
     CHECK_OK(file_->Seek(addr + PhysicalBlock::kTypeOffset));
 
@@ -559,12 +592,12 @@ base::Status Table::ScanPage(std::map<uint64_t, PageMetadata> *metadatas,
     CHECK_OK(file_->ReadFixed64(&meta.parent));
     CHECK_OK(file_->ReadFixed64(&meta.ts));
 
-    auto found = metadatas->find(id);
-    if (found == metadatas->end()) {
-        metadatas->emplace(id, meta);
+    auto found = metadata_.find(id);
+    if (found == metadata_.end()) {
+        metadata_.emplace(id, meta);
     } else {
         if (meta.ts > found->second.ts) {
-            metadatas->emplace(id, meta);
+            metadata_.emplace(id, meta);
             ClearUsed(found->second.addr);
         }
     }
@@ -574,8 +607,7 @@ base::Status Table::ScanPage(std::map<uint64_t, PageMetadata> *metadatas,
 }
 
 base::Status
-Table::ReadTreePage(std::map<uint64_t, PageMetadata> *metadatas,
-                    uint64_t id, PageTy **rv) {
+Table::ReadPage(uint64_t id, Page **rv) {
     base::Status rs;
 
     if (id == -1) {
@@ -583,11 +615,7 @@ Table::ReadTreePage(std::map<uint64_t, PageMetadata> *metadatas,
         return rs;
     }
 
-    auto meta = &metadatas->find(id)->second;
-    if (meta->page) {
-        *rv = meta->page;
-        return rs;
-    }
+    auto meta = &metadata_.find(id)->second;
 
     std::string buf;
     CHECK_OK(ReadChunk(meta->addr, &buf));
@@ -605,45 +633,101 @@ Table::ReadTreePage(std::map<uint64_t, PageMetadata> *metadatas,
     uint64_t link_id     = rd.ReadVarint64();
     uint32_t num_entries = rd.ReadVarint32();
 
-    meta->page = new PageTy(id, 16);
-
-    std::vector<uint64_t> children_id;
+    auto page = new Page(id, 16);
     if (type & Config::kPageLeafFlag) {
         for (auto i = 0; i < num_entries; ++i) {
             auto key = rd.ReadString();
             auto value = rd.ReadString();
 
             auto k = InternalKey::Pack(key, value);
-            meta->page->entries.push_back(EntryTy{k, nullptr});
+            page->entries.push_back(Entry{k, 0});
         }
     } else {
         for (auto i = 0; i < num_entries; ++i) {
-            uint64_t child_id = rd.ReadVarint64();
-            DCHECK_NE(id, child_id);
-            children_id.push_back(child_id);
+            Entry entry;
 
-            auto key = rd.ReadString();
-
-            EntryTy entry;
-            entry.key = InternalKey::Pack(key);
-            meta->page->entries.push_back(entry);
+            entry.link = rd.ReadVarint64();
+            entry.key  = InternalKey::Pack(rd.ReadString());
+            page->entries.push_back(entry);
         }
-        DCHECK_EQ(children_id.size(), meta->page->size());
     }
 
     //==========================================================================
     // Links:
     //==========================================================================
-    if ((type & Config::kPageLeafFlag) == 0) {
-        for (auto i = 0; i < children_id.size(); ++i) {
-            CHECK_OK(ReadTreePage(metadatas, children_id[i],
-                                  &meta->page->entries[i].link));
+    page->parent = (parent_id == -1 ? 0 : parent_id);
+    page->link   = (link_id   == -1 ? 0 : link_id);
+
+    *rv = page;
+    return rs;
+}
+
+Table::Page *Table::AllocatePage(int num_entries) {
+    auto page_id = next_page_id_++;
+
+    auto page = new Page(page_id, num_entries);
+    id_map_[page_id] = 0;
+
+    auto entry = new CacheEntry(page);
+    InsertHead(&cache_dummy_, entry);
+    cache_map_.emplace(page_id, entry);
+    
+    return page;
+}
+
+base::Status Table::CachedGet(uint64_t page_id, Page **rv, bool cached) {
+    base::Status rs;
+
+    if (page_id == 0) {
+        *rv = nullptr;
+        return rs;
+    }
+
+    auto found = cache_map_.find(page_id);
+    if (found != cache_map_.end()) {
+        *rv = found->second->page.get();
+        return rs;
+    }
+
+    CHECK_OK(ReadPage(page_id, rv));
+
+    auto entry = new CacheEntry(DCHECK_NOTNULL(*rv));
+    if (cached) {
+        cache_map_.emplace(page_id, entry);
+        InsertHead(&cache_dummy_, entry);
+    } else {
+        InsertTail(&cache_dummy_, entry);
+    }
+
+    cache_size_ += ApproximatePageSize(*rv);
+    if (Count(&cache_dummy_) > Config::kHoldCachedPage &&
+        cache_size_ > max_cache_size_) {
+
+        auto oldest = cache_dummy_.prev;
+        if (oldest->page && oldest->page->dirty > 0 &&
+            oldest->page->size() > 0) {
+            CHECK_OK(WritePage(oldest->page.get()));
+        }
+
+        Remove(oldest);
+        InsertTail(&cache_purge_, oldest);
+
+        cache_size_ -= ApproximatePageSize(oldest->page.get());
+    }
+
+    for (auto purge = cache_purge_.next; purge != &cache_purge_;
+         purge = purge->next) {
+
+        if (purge->page->ref_count() == 1) {
+            cache_map_.erase(purge->page->id);
+
+            auto next = purge->next;
+            Remove(purge);
+            delete purge;
+
+            purge = next;
         }
     }
-    CHECK_OK(ReadTreePage(metadatas, parent_id, &meta->page->parent.page));
-    CHECK_OK(ReadTreePage(metadatas, link_id, &meta->page->link));
-
-    *rv = meta->page;
     return rs;
 }
 

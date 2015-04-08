@@ -27,7 +27,7 @@ namespace balance {
 
 class Table : public base::ReferenceCounted<Table> {
 public:
-    Table(InternalKeyComparator comparator);
+    Table(InternalKeyComparator comparator, size_t max_cache_size);
     ~Table();
 
     base::Status Create(uint32_t page_size, uint32_t version, int order,
@@ -105,40 +105,53 @@ public:
         InternalKeyComparator comparator;
     };
 
-    typedef util::detail::Page<const char*, Comparator> PageTy;
-    typedef util::detail::Entry<const char*, Comparator> EntryTy;
+    typedef util::detail::Page<const char*, Comparator> Page;
+    typedef util::detail::Entry<const char*, Comparator> Entry;
 
     struct Allocator {
 
         Allocator(Table *t) : owns_(t) {}
 
-        PageTy *Allocate(int num_entries) {
+        Page *Allocate(int num_entries) {
             return owns_->AllocatePage(num_entries);
         }
 
-        void Free(const PageTy *page) { owns_->FreePage(page); }
+        void Free(const Page *page) { owns_->FreePage(page); }
+
+        Page *Get(uint64_t id, bool cached) const {
+            return owns_->GetPage(id, cached);
+        }
 
         Table *owns_;
     };
 
-    typedef util::BTree<const char*, Comparator, Allocator> TreeTy;
+    typedef util::BTree<const char*, Comparator, Allocator> Tree;
+
+    struct CacheEntry {
+        CacheEntry *next;
+        CacheEntry *prev;
+        base::Handle<Page> page;
+
+        CacheEntry(Page *p)
+            : page(p) {
+            next = this;
+            prev = this;
+        }
+    };
 
 private:
     struct PageMetadata {
         uint64_t parent;
         uint64_t addr;
         uint64_t ts;
-        PageTy *page = nullptr;
     };
 
     base::Status InitFile(int order);
     base::Status LoadTree();
-    base::Status ScanPage(std::map<uint64_t, PageMetadata> *metadatas,
-                          uint64_t addr);
-    base::Status ReadTreePage(std::map<uint64_t, PageMetadata> *metadatas,
-                              uint64_t id, PageTy **rv);
+    base::Status ScanPage(uint64_t addr);
+    base::Status ReadPage(uint64_t id, Page **rv);
 
-    base::Status WritePage(const PageTy *page);
+    base::Status WritePage(const Page *page);
     base::Status WriteChunk(const char *buf, size_t len, uint64_t *addr);
     base::Status WriteBlock(const char *buf, uint16_t len, uint8_t type,
                             uint64_t addr, uint64_t next);
@@ -147,8 +160,11 @@ private:
     base::Status MakeRoomForPage(uint64_t *addr);
     base::Status FreeRoomForPage(uint64_t id);
 
-    inline PageTy *AllocatePage(int num_entries);
-    inline void FreePage(const PageTy *page);
+    Page *AllocatePage(int num_entries);
+    inline void FreePage(const Page *page);
+    inline Page *GetPage(uint64_t id, bool cached);
+
+    base::Status CachedGet(uint64_t page_id, Page **rv, bool cached);
 
     inline uint64_t Addr2Index(uint64_t addr);
     inline bool TestUsed(uint64_t addr);
@@ -158,16 +174,27 @@ private:
     uint32_t page_size_ = 0;
     uint32_t version_ = 0;
     uint64_t file_size_ = 0;
-    uint64_t next_page_id_ = 0;
+    uint64_t next_page_id_ = 1;
 
+    // file usage bitmap
     util::Bitmap<uint32_t> bitmap_;
 
     // page_id -> physical address
     std::unordered_map<uint64_t, uint64_t> id_map_;
 
+    // page metadatas
+    std::map<uint64_t, PageMetadata> metadata_;
+
+    // cache
+    std::map<uint64_t, CacheEntry*> cache_map_;
+    CacheEntry cache_dummy_;
+    CacheEntry cache_purge_;
+    size_t cache_size_ = 0;
+    const size_t max_cache_size_;
+
     InternalKeyComparator comparator_;
-    
-    std::unique_ptr<TreeTy> tree_;
+
+    std::unique_ptr<Tree> tree_;
     base::FileIO *file_ = nullptr;
 }; // class Table
 

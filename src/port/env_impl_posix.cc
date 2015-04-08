@@ -20,6 +20,11 @@ base::Status EnvImpl::CreateAppendFile(const std::string &fname,
     return port::CreateAppendFile(fname.c_str(), file);
 }
 
+base::Status EnvImpl::CreateFileIO(const std::string &fname,
+                                   base::FileIO **file) {
+    return port::CreateFileIO(fname.c_str(), file);
+}
+
 base::Status EnvImpl::CreateRandomAccessFile(const std::string &fname,
                                              base::MappedMemory **file) {
     return port::CreateRandomAccessFile(fname.c_str(), file);

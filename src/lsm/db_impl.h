@@ -159,7 +159,8 @@ public:
     void TEST_WaitForBackground();
     void TEST_DumpVersions();
 
-    constexpr static const auto kName = "lsm";
+    // The engine's name
+    constexpr static const auto kName = "yukino.lsm";
 
     class WritingHandler;
 private:

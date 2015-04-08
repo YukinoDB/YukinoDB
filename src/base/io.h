@@ -115,6 +115,8 @@ public:
     char *tail() { return mutable_buf() + len_; }
 
     bool Reserve(size_t size);
+
+    virtual size_t active() const override { return len(); }
 private:
     bool Advance(size_t add);
 

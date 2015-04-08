@@ -12,6 +12,7 @@ namespace base {
 
 class Writer;
 class AppendFile;
+class FileIO;
 class MappedMemory;
 class FileLock;
 
@@ -38,6 +39,16 @@ public:
     // The returned file will only be accessed by one thread at a time.
     virtual base::Status CreateAppendFile(const std::string &fname,
                                           base::AppendFile **file) = 0;
+
+    // Create an object that writes to a new file with the specified
+    // name.  Deletes any existing file with the same name and creates a
+    // new file.  On success, stores a pointer to the new file in
+    // *result and returns OK.  On failure stores NULL in *result and
+    // returns non-OK.
+    //
+    // The returned file will only be accessed by one thread at a time.
+    virtual base::Status CreateFileIO(const std::string &fname,
+                                      base::FileIO **file) = 0;
 
     // Create a brand new random access read-only file with the
     // specified name.  On success, stores a pointer to the new file in

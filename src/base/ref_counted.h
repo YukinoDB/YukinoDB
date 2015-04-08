@@ -9,11 +9,14 @@ namespace yukino {
 
 namespace base {
 
-class DefautlDeleter {
-public:
-
+struct DefautlDeleter {
     template<class T>
     static void Delete(T *p) { delete p; }
+};
+
+struct EmptyDeleter {
+    template<class T>
+    static void Delete(T */*p*/) { /*DO NOTHING*/ }
 };
 
 template <class T, class Deleter = DefautlDeleter>
@@ -23,6 +26,7 @@ public:
     int AddRef() const { return counter_++; }
 
     void Release() const {
+        DCHECK_GE(counter_, 1);
         if (--counter_ == 0) {
             Deleter::Delete(static_cast<T*>(const_cast<ReferenceCounted*>(this)));
         }
@@ -48,6 +52,7 @@ public:
                                            std::memory_order_relaxed) == 1) {
             Deleter::Delete(static_cast<T*>(const_cast<AtomicReferenceCounted*>(this)));
         }
+        DCHECK_GE(counter_.load(std::memory_order_relaxed), 0);
     }
 
     int ref_count() const { return counter_.load(std::memory_order_relaxed); }
@@ -115,6 +120,8 @@ public:
 
     operator bool() const { return naked_ != nullptr; }
 
+    bool is_null() const { return naked_ == nullptr; }
+
 private:
     T *naked_ = nullptr;
 };
@@ -122,6 +129,16 @@ private:
 template<class T>
 inline Handle<T> MakeHandle(T *naked) {
     return Handle<T>(naked);
+}
+
+template<class T>
+inline bool operator == (const Handle<T> &a, const Handle<T> &b) {
+    return a.get() == b.get();
+}
+
+template<class T>
+inline bool operator != (const Handle<T> &a, const Handle<T> &b) {
+    return a.get() != b.get();
 }
 
 } // namespace base

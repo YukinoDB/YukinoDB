@@ -25,12 +25,12 @@ public:
 
     virtual void SetUp() override {
         InternalKeyComparator comparator(BytewiseCompartor());
-        table_ = new Table(comparator);
+        table_ = new Table(comparator, -1);
     }
 
     virtual void TearDown() override {
         if (table_.get()) {
-            table_->Release();
+            table_ = nullptr;
         }
         io_.Reset();
     }
@@ -93,7 +93,7 @@ TEST_F(BtreeTableTest, Reopen) {
     EXPECT_FALSE(table_->Put("aaa", 2, kFlagValue, "3", &dummy));
 
     InternalKeyComparator comparator(BytewiseCompartor());
-    table_ = new Table(comparator);
+    table_ = new Table(comparator, -1);
 
     rs = table_->Open(&io_, io_.buf().size());
     ASSERT_TRUE(rs.ok()) << rs.ToString();
@@ -169,7 +169,7 @@ TEST_F(BtreeTableTest, MutilReopen) {
     }
 
     InternalKeyComparator comparator(BytewiseCompartor());
-    table_ = new Table(comparator);
+    table_ = new Table(comparator, -1);
 
     rs = table_->Open(&io_, io_.buf().size());
     ASSERT_TRUE(rs.ok()) << rs.ToString();

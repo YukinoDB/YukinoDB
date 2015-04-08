@@ -1,5 +1,6 @@
 #include "yukino/db.h"
 #include "lsm/db_impl.h"
+#include "balance/db_impl.h"
 #include "yukino/options.h"
 #include "base/slice.h"
 #include <memory>
@@ -12,6 +13,16 @@ namespace yukino {
         std::unique_ptr<lsm::DBImpl> db(new lsm::DBImpl(options, name));
 
         auto rs = db->Open(options);
+        if (!rs.ok()) {
+            return rs;
+        }
+
+        *dbptr = db.release();
+        return rs;
+    } else if (::strcmp(options.engine_name, balance::DBImpl::kName) == 0) {
+        std::unique_ptr<balance::DBImpl> db(new balance::DBImpl(options, name));
+
+        auto rs = db->Open();
         if (!rs.ok()) {
             return rs;
         }

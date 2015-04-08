@@ -96,7 +96,7 @@ InternalKey::Pack(const base::Slice &key, const base::Slice &value) {
     w.Write(key.data(), key.size(), nullptr);
     w.Write(value.data(), value.size(), nullptr);
 
-    DCHECK_EQ(0, w.active());
+    DCHECK_EQ(size, w.active());
     return w.Drop();
 }
 
@@ -118,7 +118,7 @@ InternalKey::Pack(const base::Slice &key, uint64_t tx_id, uint8_t flag,
     w.WriteFixed64(tx_id << 8 | flag);
     w.Write(value.data(), value.size(), nullptr);
 
-    DCHECK_EQ(0, w.active());
+    DCHECK_EQ(size, w.active());
     return w.Drop();
 }
 

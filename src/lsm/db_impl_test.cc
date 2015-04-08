@@ -9,8 +9,6 @@
 #include "yukino/env.h"
 #include "yukino/options.h"
 #include "yukino/write_batch.h"
-#include "yukino/read_options.h"
-#include "yukino/write_options.h"
 #include "yukino/iterator.h"
 #include "gtest/gtest.h"
 #include <stdio.h>

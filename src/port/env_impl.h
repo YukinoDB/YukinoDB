@@ -16,6 +16,8 @@ public:
 
     virtual base::Status CreateAppendFile(const std::string &fname,
                                           base::AppendFile **file) override;
+    virtual base::Status CreateFileIO(const std::string &fname,
+                                      base::FileIO **file) override;
     virtual base::Status CreateRandomAccessFile(const std::string &fname,
                                                 base::MappedMemory **file) override;
 
