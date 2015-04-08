@@ -41,8 +41,15 @@ inline int Count(const Table::CacheEntry *h) {
 }
 
 inline size_t ApproximatePageSize(const Table::Page *page) {
-    size_t count = 0;
-    // TODO:
+    size_t count = sizeof(*page);
+
+    for (const auto &entry : page->entries) {
+        count += sizeof(Table::Entry);
+
+        size_t len = 0;
+        count += base::Varint32::Decode(entry.key, &len);
+        count += len;
+    }
     return count;
 }
     
@@ -117,20 +124,19 @@ Table::~Table() {
     if (tree_.get()) {
         Flush(true);
 
-//        std::vector<const Page*> collected;
-//        tree_->Travel(tree_->TEST_GetRoot(), [&collected] (const Page *page) {
-//            collected.push_back(page);
-//            return true;
-//        });
-//
-//        for (auto page : collected) {
-//            if (page->is_leaf()) {
-//                for (auto entry : page->entries) {
-//                    delete[] entry.key;
-//                }
-//            }
-//            delete page;
-//        }
+        auto purge = cache_dummy_.next;
+        while (purge != &cache_dummy_) {
+            auto tmp = purge;
+            purge = purge->next;
+            delete tmp;
+        }
+
+        purge = cache_purge_.next;
+        while (purge != &cache_purge_) {
+            auto tmp = purge;
+            purge = purge->next;
+            delete tmp;
+        }
     }
 }
 
