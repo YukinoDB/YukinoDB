@@ -41,6 +41,15 @@ struct Dll {
         (x)->prev->next = (x)->next;
     }
 
+    template<class T>
+    static inline int Count(T *h) {
+        auto i = 0;
+        for (auto entry = h->next; entry != h; entry = entry->next) {
+            ++i;
+        }
+        return i;
+    }
+
 }; // struct Dll
 
 } // namespace util

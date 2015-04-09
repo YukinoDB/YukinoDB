@@ -14,33 +14,6 @@ namespace balance {
 
 namespace {
 
-//inline void InsertHead(Table::CacheEntry *h, Table::CacheEntry *x) {
-//    (x)->next = (h)->next;
-//    (x)->next->prev = x;
-//    (x)->prev = h;
-//    (h)->next = x;
-//}
-//
-//inline void InsertTail(Table::CacheEntry *h, Table::CacheEntry *x) {
-//    (x)->prev = (h)->prev;
-//    (x)->prev->next = x;
-//    (x)->next = h;
-//    (h)->prev = x;
-//}
-//
-//inline void Remove(Table::CacheEntry *x) {
-//    (x)->next->prev = (x)->prev;
-//    (x)->prev->next = (x)->next;
-//}
-
-inline int Count(const Table::CacheEntry *h) {
-    auto i = 0;
-    for (auto entry = h->next; entry != h; entry = entry->next) {
-        ++i;
-    }
-    return i;
-}
-
 inline size_t ApproximatePageSize(const Table::Page *page) {
     size_t count = sizeof(*page);
 
@@ -350,6 +323,12 @@ base::Status Table::WritePage(const Page *page) {
     uint64_t addr = 0;
     CHECK_OK(WriteChunk(w.buf(), w.len(), &addr));
     id_map_[page->id] = addr;
+
+    PageMetadata meta;
+    meta.addr   = addr;
+    meta.parent = page->parent;
+    meta.ts     = NowMicroseconds();
+    metadata_.emplace(page->id, meta);
     return rs;
 }
 
@@ -627,10 +606,12 @@ Table::ReadPage(uint64_t id, Page **rv) {
         return rs;
     }
 
-    auto meta = &metadata_.find(id)->second;
+    auto found = metadata_.find(id);
+    DCHECK(metadata_.end() != found);
+    const auto &meta = found->second;
 
     std::string buf;
-    CHECK_OK(ReadChunk(meta->addr, &buf));
+    CHECK_OK(ReadChunk(meta.addr, &buf));
 
     base::BufferedReader rd(buf.data(), buf.size());
 
@@ -674,45 +655,19 @@ Table::ReadPage(uint64_t id, Page **rv) {
     return rs;
 }
 
-Table::Page *Table::AllocatePage(int num_entries) {
-    auto page_id = next_page_id_++;
-
-    auto page = new Page(page_id, num_entries);
-    id_map_[page_id] = 0;
-
-    auto entry = new CacheEntry(page);
-    util::Dll::InsertHead(&cache_dummy_, entry);
-    cache_map_.emplace(page_id, entry);
-    
-    return page;
-}
-
-base::Status Table::CachedGet(uint64_t page_id, Page **rv, bool cached) {
+base::Status Table::CachedActivity(Page *page, bool cached) {
     base::Status rs;
 
-    if (page_id == 0) {
-        *rv = nullptr;
-        return rs;
-    }
-
-    auto found = cache_map_.find(page_id);
-    if (found != cache_map_.end()) {
-        *rv = found->second->page.get();
-        return rs;
-    }
-
-    CHECK_OK(ReadPage(page_id, rv));
-
-    auto entry = new CacheEntry(DCHECK_NOTNULL(*rv));
+    auto entry = new CacheEntry(DCHECK_NOTNULL(page));
     if (cached) {
-        cache_map_.emplace(page_id, entry);
+        cache_map_.emplace(page->id, entry);
         util::Dll::InsertHead(&cache_dummy_, entry);
     } else {
-        util::Dll::InsertTail(&cache_dummy_, entry);
+        util::Dll::InsertTail(&cache_purge_, entry);
     }
 
-    cache_size_ += ApproximatePageSize(*rv);
-    if (Count(&cache_dummy_) > Config::kHoldCachedPage &&
+    cache_size_ += ApproximatePageSize(page);
+    if (util::Dll::Count(&cache_dummy_) > Config::kHoldCachedPage &&
         cache_size_ > max_cache_size_) {
 
         auto oldest = cache_dummy_.prev;
@@ -736,12 +691,17 @@ base::Status Table::CachedGet(uint64_t page_id, Page **rv, bool cached) {
             auto next = purge->next;
             util::Dll::Remove(purge);
 
+            //DLOG(INFO) << "clear page: " << purge->page->id;
+            if (purge->page->dirty > 0) {
+                CHECK_OK(WritePage(purge->page.get()));
+            }
             ClearPage(purge->page.get());
             delete purge;
-
+            
             purge = next;
         }
     }
+
     return rs;
 }
 

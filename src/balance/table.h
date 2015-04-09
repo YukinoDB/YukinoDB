@@ -166,12 +166,13 @@ private:
     base::Status MakeRoomForPage(uint64_t *addr);
     base::Status FreeRoomForPage(uint64_t id);
 
-    Page *AllocatePage(int num_entries);
-    void FreePage(Page *page);
+    inline Page *AllocatePage(int num_entries);
+    inline void FreePage(Page *page);
     inline const char *DuplicateKey(const char *key);
     inline Page *GetPage(uint64_t id, bool cached);
 
     base::Status CachedGet(uint64_t page_id, Page **rv, bool cached);
+    base::Status CachedActivity(Page *page, bool cached);
 
     inline void ClearPage(const Page *page) const;
 
@@ -191,7 +192,7 @@ private:
     // page_id -> physical address
     std::unordered_map<uint64_t, uint64_t> id_map_;
 
-    // page metadatas
+    // page_id -> page metadatas
     std::map<uint64_t, PageMetadata> metadata_;
 
     // cache

@@ -39,6 +39,11 @@ inline void Table::FreePage(Page *page) {
     if (page) {
         FreeRoomForPage(page->id);
         id_map_[page->id] = 0;
+        metadata_.erase(page->id);
+
+        ClearPage(page);
+        page->entries.clear();
+        page->dirty = 0;
 
         auto entry = new CacheEntry(page);
         util::Dll::InsertTail(&cache_purge_, entry);
@@ -54,6 +59,9 @@ inline void Table::ClearPage(const Page *page) const {
 inline Table::Page *Table::GetPage(uint64_t id, bool cached) {
     Page *page = nullptr;
     auto rs = CachedGet(id, &page, cached);
+    if (!rs.ok()) {
+        DLOG(ERROR) << rs.ToString();
+    }
     return page;
 }
 
@@ -62,6 +70,33 @@ inline const char *Table::DuplicateKey(const char *key) {
 
     // Only kept key.
     return InternalKey::Pack(parsed.key(), "");
+}
+
+inline Table::Page *Table::AllocatePage(int num_entries) {
+    auto page_id = next_page_id_++;
+
+    auto page = new Page(page_id, num_entries);
+    id_map_[page_id] = 0;
+
+    CachedActivity(page, true);
+    return page;
+}
+
+inline base::Status Table::CachedGet(uint64_t page_id, Page **rv, bool cached) {
+    base::Status rs;
+
+    if (page_id == 0) {
+        *rv = nullptr;
+        return rs;
+    }
+
+    auto found = cache_map_.find(page_id);
+    if (found != cache_map_.end()) {
+        *rv = found->second->page.get();
+        return rs;
+    }
+    CHECK_OK(ReadPage(page_id, rv));
+    return CachedActivity(*rv, cached);
 }
 
 inline int Table::Comparator::operator()(const char *a, const char *b) const {

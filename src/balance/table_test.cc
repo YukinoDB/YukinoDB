@@ -256,6 +256,22 @@ TEST_F(BtreeTableTest, DeletionHidden) {
     EXPECT_EQ("1", dummy);
 }
 
+TEST_F(BtreeTableTest, LargeInsertion) {
+    InternalKeyComparator comparator(BytewiseCompartor());
+    table_ = new Table(comparator, 4 * base::kMB);
+
+    auto rs = table_->Create(kPageSize, Config::kBtreeFileVersion, 127, &io_);
+    ASSERT_TRUE(rs.ok()) << rs.ToString();
+
+    static const auto kBench = 100000;
+    uint64_t tx_id = 0;
+    std::string dummy(512, '1');
+
+    for (auto i = 0; i < kBench; ++i) {
+        ASSERT_FALSE(table_->Put("aaa", tx_id++, kFlagValue, dummy, nullptr));
+    }
+}
+
 } // namespace balance
 
 } // namespace yukino
