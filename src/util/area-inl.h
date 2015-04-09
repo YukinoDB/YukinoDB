@@ -2,6 +2,7 @@
 #define YUKINO_UTIL_AREA_INL_H_
 
 #include "util/area.h"
+#include "util/linked_queue.h"
 #include "glog/logging.h"
 
 namespace yukino {
@@ -42,21 +43,8 @@ inline Area::PageHead *Area::GetSegment(size_t size) {
     return &segments_[shift];
 }
 
-inline void Area::InsertHead(PageHead *h, PageHead *x) {
-    (x)->next = (h)->next;
-    (x)->next->prev = x;
-    (x)->prev = h;
-    (h)->next = x;
-}
-
-inline void Area::Remove(PageHead *x) {
-    (x)->next->prev = (x)->prev;
-    (x)->prev->next = (x)->next;
-}
-
 inline void Area::Init(PageHead *x, int32_t shift) {
-    x->next  = x;
-    x->prev  = x;
+    Dll::Init(x);
     x->shift = shift;
     x->freed = static_cast<int32_t>(page_payload_capacity(x));
 }

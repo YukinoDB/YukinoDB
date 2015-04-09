@@ -1,5 +1,6 @@
 #include "balance/table-inl.h"
 #include "balance/table.h"
+#include "util/linked_queue.h"
 #include "base/io-inl.h"
 #include "base/io.h"
 #include "base/crc32.h"
@@ -13,24 +14,24 @@ namespace balance {
 
 namespace {
 
-inline void InsertHead(Table::CacheEntry *h, Table::CacheEntry *x) {
-    (x)->next = (h)->next;
-    (x)->next->prev = x;
-    (x)->prev = h;
-    (h)->next = x;
-}
-
-inline void InsertTail(Table::CacheEntry *h, Table::CacheEntry *x) {
-    (x)->prev = (h)->prev;
-    (x)->prev->next = x;
-    (x)->next = h;
-    (h)->prev = x;
-}
-
-inline void Remove(Table::CacheEntry *x) {
-    (x)->next->prev = (x)->prev;
-    (x)->prev->next = (x)->next;
-}
+//inline void InsertHead(Table::CacheEntry *h, Table::CacheEntry *x) {
+//    (x)->next = (h)->next;
+//    (x)->next->prev = x;
+//    (x)->prev = h;
+//    (h)->next = x;
+//}
+//
+//inline void InsertTail(Table::CacheEntry *h, Table::CacheEntry *x) {
+//    (x)->prev = (h)->prev;
+//    (x)->prev->next = x;
+//    (x)->next = h;
+//    (h)->prev = x;
+//}
+//
+//inline void Remove(Table::CacheEntry *x) {
+//    (x)->next->prev = (x)->prev;
+//    (x)->prev->next = (x)->next;
+//}
 
 inline int Count(const Table::CacheEntry *h) {
     auto i = 0;
@@ -564,7 +565,7 @@ base::Status Table::LoadTree() {
     // Clear cache first, has a unused root page.
     cache_map_.clear();
     auto purge = cache_dummy_.next;
-    Remove(purge);
+    util::Dll::Remove(purge);
     delete purge;
 
 
@@ -680,7 +681,7 @@ Table::Page *Table::AllocatePage(int num_entries) {
     id_map_[page_id] = 0;
 
     auto entry = new CacheEntry(page);
-    InsertHead(&cache_dummy_, entry);
+    util::Dll::InsertHead(&cache_dummy_, entry);
     cache_map_.emplace(page_id, entry);
     
     return page;
@@ -705,9 +706,9 @@ base::Status Table::CachedGet(uint64_t page_id, Page **rv, bool cached) {
     auto entry = new CacheEntry(DCHECK_NOTNULL(*rv));
     if (cached) {
         cache_map_.emplace(page_id, entry);
-        InsertHead(&cache_dummy_, entry);
+        util::Dll::InsertHead(&cache_dummy_, entry);
     } else {
-        InsertTail(&cache_dummy_, entry);
+        util::Dll::InsertTail(&cache_dummy_, entry);
     }
 
     cache_size_ += ApproximatePageSize(*rv);
@@ -720,8 +721,8 @@ base::Status Table::CachedGet(uint64_t page_id, Page **rv, bool cached) {
             CHECK_OK(WritePage(oldest->page.get()));
         }
 
-        Remove(oldest);
-        InsertTail(&cache_purge_, oldest);
+        util::Dll::Remove(oldest);
+        util::Dll::InsertTail(&cache_purge_, oldest);
 
         cache_size_ -= ApproximatePageSize(oldest->page.get());
     }
@@ -733,7 +734,7 @@ base::Status Table::CachedGet(uint64_t page_id, Page **rv, bool cached) {
             cache_map_.erase(purge->page->id);
 
             auto next = purge->next;
-            Remove(purge);
+            util::Dll::Remove(purge);
 
             ClearPage(purge->page.get());
             delete purge;
@@ -742,16 +743,6 @@ base::Status Table::CachedGet(uint64_t page_id, Page **rv, bool cached) {
         }
     }
     return rs;
-}
-
-void Table::FreePage(Page *page) {
-    if (page) {
-        FreeRoomForPage(page->id);
-        id_map_[page->id] = 0;
-
-        auto entry = new CacheEntry(page);
-        InsertTail(&cache_purge_, entry);
-    }
 }
 
 } // namespace balance

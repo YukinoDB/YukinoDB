@@ -2,6 +2,7 @@
 #define YUKINO_BALANCE_TABLE_INL_H_
 
 #include "balance/table.h"
+#include "util/linked_queue.h"
 
 namespace yukino {
 
@@ -32,6 +33,16 @@ inline void Table::SetUsed(uint64_t addr) {
 inline void Table::ClearUsed(uint64_t addr) {
     auto i = Addr2Index(addr);
     return bitmap_.unset(static_cast<int>(i));
+}
+
+inline void Table::FreePage(Page *page) {
+    if (page) {
+        FreeRoomForPage(page->id);
+        id_map_[page->id] = 0;
+
+        auto entry = new CacheEntry(page);
+        util::Dll::InsertTail(&cache_purge_, entry);
+    }
 }
 
 inline void Table::ClearPage(const Page *page) const {

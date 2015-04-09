@@ -206,7 +206,6 @@ private:
     std::unique_ptr<Tree> tree_;
     base::FileIO *file_ = nullptr;
 
-    // the area memory
 }; // class Table
 
 } // namespace balance

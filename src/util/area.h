@@ -57,10 +57,7 @@ private:
 
     inline PageHead *GetSegment(size_t size);
 
-    inline void InsertHead(PageHead *h, PageHead *x);
-    inline void Remove(PageHead *x);
     inline void Init(PageHead *x, int32_t shift);
-    inline bool Empty(PageHead *h) { return h->next == h && h->prev == h; }
 
     static inline void DebugFill(void *p, size_t n, int byte);
 

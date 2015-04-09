@@ -32,15 +32,15 @@ void *Area::Allocate(size_t size) {
         }
         Init(page, kLargePageType);
         page->freed = static_cast<int32_t>(size);
-        InsertHead(&segments_[0], page);
+        Dll::InsertHead(&segments_[0], page);
 
         rv = static_cast<void *>(page + 1);
     } else if (size > 0) {
         auto segment = GetSegment(size);
 
-        if (Empty(segment) || segment->next->freed < size) {
+        if (Dll::Empty(segment) || segment->next->freed < size) {
             auto page = CreatePage(segment->shift);
-            InsertHead(segment, page);
+            Dll::InsertHead(segment, page);
         }
 
         auto page = segment->next;
@@ -66,7 +66,7 @@ void Area::Free(const void *p) {
     auto segment = GetSegment(chunk_size);
     DebugFill(chunk, chunk_size, kFreedByte);
     if (page->shift == kLargePageType) {
-        Remove(page);
+        Dll::Remove(page);
         ::free(page);
         return;
     }
@@ -76,19 +76,19 @@ void Area::Free(const void *p) {
     page->freed += chunk_size;
 
     if (page->freed == page_payload_capacity(page)) {
-        Remove(page);
+        Dll::Remove(page);
         ::free(page);
     } else if (page->freed > segment->next->freed) {
-        Remove(page);
-        InsertHead(segment, page);
+        Dll::Remove(page);
+        Dll::InsertHead(segment, page);
     }
 }
 
 void Area::Purge() {
     for (auto i = 0; i < kNumSegments; ++i) {
-        while (!Empty(&segments_[i])) {
+        while (!Dll::Empty(&segments_[i])) {
             auto purge = segments_[i].next;
-            Remove(purge);
+            Dll::Remove(purge);
             ::free(purge);
         }
     }
