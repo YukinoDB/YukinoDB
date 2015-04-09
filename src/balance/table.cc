@@ -117,7 +117,8 @@ Table::Table(InternalKeyComparator comparator, size_t max_cache_size)
     , bitmap_(0)
     , cache_dummy_(nullptr)
     , cache_purge_(nullptr)
-    , max_cache_size_(max_cache_size) {
+    , max_cache_size_(max_cache_size)
+    , area_(8 * base::kKB) {
 }
 
 Table::~Table() {
@@ -197,7 +198,7 @@ bool Table::Put(const base::Slice &key, uint64_t tx_id, KeyFlag flag,
                 const base::Slice &value,
                 std::string *old_value) {
 
-    auto packed = InternalKey::Pack(key, tx_id, flag, value);
+    auto packed = InternalKey::Pack(key, tx_id, flag, value, &area_);
 
     const char *old = nullptr;
     auto rv = tree_->Put(packed, &old);
@@ -206,7 +207,7 @@ bool Table::Put(const base::Slice &key, uint64_t tx_id, KeyFlag flag,
             auto parsed = InternalKey::Parse(old);
             old_value->assign(parsed.value.data(), parsed.value.size());
         }
-        delete[] old;
+        area_.Free(old);
     }
     return rv;
 }
@@ -214,9 +215,10 @@ bool Table::Put(const base::Slice &key, uint64_t tx_id, KeyFlag flag,
 bool Table::Get(const base::Slice &key, uint64_t tx_id, std::string *value) {
     Tree::Iterator iter(tree_.get());
 
-    std::unique_ptr<const char[]> packed(InternalKey::Pack(key, tx_id,
-                                                           kFlagFind, ""));
-    iter.Seek(packed.get());
+    auto packed = InternalKey::Pack(key, tx_id, kFlagFind, "", &area_);
+    iter.Seek(packed);
+    area_.Free(packed);
+
     if (!iter.Valid()) {
         return false;
     }
@@ -273,8 +275,9 @@ public:
     virtual void SeekToFirst() override { iter_.SeekToFirst(); }
     virtual void SeekToLast() override { iter_.SeekToLast(); }
     virtual void Seek(const base::Slice& target) override {
-        std::unique_ptr<const char[]> packed(InternalKey::Pack(target, ""));
-        iter_.Seek(packed.get());
+        auto packed = InternalKey::Pack(target, "", area_);
+        iter_.Seek(packed);
+        area_->Free(packed);
     }
     virtual void Next() override { iter_.Next(); }
     virtual void Prev() override { iter_.Prev(); }
@@ -292,6 +295,7 @@ public:
 
 private:
     Table::Tree::Iterator iter_;
+    util::Area *area_;
 };
 
 } // namespace
@@ -645,7 +649,7 @@ Table::ReadPage(uint64_t id, Page **rv) {
             auto key = rd.ReadString();
             auto value = rd.ReadString();
 
-            auto k = InternalKey::Pack(key, value);
+            auto k = InternalKey::Pack(key, value, &area_);
             page->entries.push_back(Entry{k, 0});
         }
     } else {
@@ -653,7 +657,7 @@ Table::ReadPage(uint64_t id, Page **rv) {
             Entry entry;
 
             entry.link = rd.ReadVarint64();
-            entry.key  = InternalKey::Pack(rd.ReadString());
+            entry.key  = InternalKey::Pack(rd.ReadString(), &area_);
             page->entries.push_back(entry);
         }
     }

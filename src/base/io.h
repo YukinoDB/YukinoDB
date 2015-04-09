@@ -93,8 +93,12 @@ public:
 class BufferedWriter : public Writer {
 public:
     BufferedWriter() = default;
-    BufferedWriter(size_t size) { Reserve(size); }
-    virtual ~BufferedWriter() = default;
+
+    explicit BufferedWriter(size_t size) { Reserve(size); }
+
+    inline BufferedWriter(void *buf, size_t size);
+
+    virtual ~BufferedWriter();
 
     virtual Status Write(const void *data, size_t size, size_t *written) override;
 
@@ -102,11 +106,11 @@ public:
 
     inline Status Write(char ch);
 
-    const char *buf() const { return buf_.get(); }
+    const char *buf() const { return buf_; }
     size_t len() const { return len_; }
     size_t cap() const { return cap_; }
 
-    char *mutable_buf() { return buf_.get(); }
+    char *mutable_buf() { return buf_; }
 
     inline char *Drop();
 
@@ -120,9 +124,10 @@ public:
 private:
     bool Advance(size_t add);
 
-    std::unique_ptr<char[]> buf_;
+    char *buf_ = nullptr;
     size_t len_ = 0;
     size_t cap_ = 0;
+    const bool ownership_ = true;
 };
 
 template<class Checksum>

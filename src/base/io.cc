@@ -155,15 +155,21 @@ Status BufferedWriter::Skip(size_t count) {
     return Status::OK();
 }
 
+BufferedWriter::~BufferedWriter() {
+    if (ownership_) delete[] buf_;
+}
+
 bool BufferedWriter::Reserve(size_t size) {
     if (size < len())
         return false;
 
-    std::unique_ptr<char[]> buf(new char[size]);
+    auto buf = new char[size];
     if (!buf)
         return false;
+
     cap_ = size;
-    buf_ = std::move(buf);
+    delete[] buf_;
+    buf_ = buf;
 
     return true;
 }
@@ -171,19 +177,23 @@ bool BufferedWriter::Reserve(size_t size) {
 bool BufferedWriter::Advance(size_t add) {
 
     if (len() + add > cap()) {
+        if (!ownership_) {
+            return false;
+        }
 
         auto res = cap();
         while (res < len() + add) {
             res = res * 2 + 128;
         }
 
-        std::unique_ptr<char[]> buf(new char[res]);
+        auto buf = new char[res];
         if (!buf)
             return false;
 
-        ::memcpy(buf.get(), buf_.get(), len_);
+        ::memcpy(buf, buf_, len_);
         cap_ = res;
-        buf_ = std::move(buf);
+        delete[] buf_;
+        buf_ = buf;
     }
     return true;
 }

@@ -4,6 +4,7 @@
 #include "balance/format.h"
 #include "util/btree.h"
 #include "util/bloom_filter.h"
+#include "util/area.h"
 #include "base/ref_counted.h"
 #include "base/status.h"
 #include "base/base.h"
@@ -196,6 +197,9 @@ private:
 
     std::unique_ptr<Tree> tree_;
     base::FileIO *file_ = nullptr;
+
+    // the area memory
+    util::Area area_;
 }; // class Table
 
 } // namespace balance

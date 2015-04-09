@@ -8,6 +8,12 @@
 
 namespace yukino {
 
+namespace util {
+
+class Area;
+
+} // namespace util
+
 namespace balance {
 
 struct Config final {
@@ -83,12 +89,14 @@ public:
 
     static ParsedKey PartialParse(const char *raw, size_t len);
 
-    static const char *Pack(const base::Slice &key, const base::Slice &value);
+    static const char *Pack(const base::Slice &key, const base::Slice &value,
+                            util::Area *area);
 
-    static const char *Pack(const base::Slice &key) { return Pack(key, ""); }
+    static const char *Pack(const base::Slice &key,
+                            util::Area *area) { return Pack(key, "", area); }
 
     static const char *Pack(const base::Slice &key, uint64_t tx_id, uint8_t flag,
-                            const base::Slice &value);
+                            const base::Slice &value, util::Area *area);
 
     InternalKey() = delete;
     ~InternalKey() = delete;

@@ -88,6 +88,12 @@ TEST(BaseTest, StringIOVarint) {
     EXPECT_EQ(512, dummy);
 }
 
+TEST(BaseTest, AlignBounds) {
+    EXPECT_EQ(0, AlignDownBounds(32, 0));
+    EXPECT_EQ(32, AlignDownBounds(32, 32));
+    EXPECT_EQ(32, AlignDownBounds(32, 31));
+}
+
 } // namespace base
 
 } // namespace yukino

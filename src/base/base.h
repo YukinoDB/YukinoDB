@@ -168,6 +168,10 @@ struct Bits final {
     ~Bits() = delete;
 }; // struct Bits
 
+inline size_t AlignDownBounds(size_t bounds, size_t value) {
+    return (value + bounds - 1) & (~(bounds - 1));
+}
+
 } // namespace base
 
 } // namespace yukinodb

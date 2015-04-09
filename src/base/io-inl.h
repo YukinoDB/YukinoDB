@@ -74,6 +74,12 @@ inline Status Reader::ReadLargeString(std::string *str) {
 // class BufferedWriter
 //==============================================================================
 
+inline BufferedWriter::BufferedWriter(void *buf, size_t size)
+    : buf_(static_cast<char*>(buf))
+    , cap_(size)
+    , ownership_(false) {
+}
+
 inline Status BufferedWriter::Write(char ch) {
     if (!Advance(1)) {
         return Status::Corruption("not enough memory.");
@@ -83,16 +89,18 @@ inline Status BufferedWriter::Write(char ch) {
 }
 
 inline char *BufferedWriter::Drop() {
-    auto droped = buf_.release();
+    auto droped = buf_;
     len_ = 0;
     cap_ = 0;
+    buf_ = nullptr;
     return droped;
 }
 
 inline void BufferedWriter::Clear() {
-    std::unique_ptr<char[]>().swap(buf_);
+    delete[] buf_;
     len_ = 0;
     cap_ = 0;
+    buf_ = nullptr;
 }
 
 //==============================================================================

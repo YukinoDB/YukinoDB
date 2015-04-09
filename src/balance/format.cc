@@ -1,4 +1,6 @@
 #include "balance/format.h"
+#include "util/area-inl.h"
+#include "util/area.h"
 #include "base/io-inl.h"
 #include "base/io.h"
 #include "base/varint_encoding.h"
@@ -82,7 +84,8 @@ ParsedKey InternalKey::PartialParse(const char *raw, size_t len) {
 
 /*static*/
 const char *
-InternalKey::Pack(const base::Slice &key, const base::Slice &value) {
+InternalKey::Pack(const base::Slice &key, const base::Slice &value,
+                  util::Area *area) {
     auto key_len = static_cast<uint32_t>(key.size());
     auto len = key_len + static_cast<uint32_t>(value.size());
 
@@ -90,7 +93,7 @@ InternalKey::Pack(const base::Slice &key, const base::Slice &value) {
     size += base::Varint32::Sizeof(key_len);
     size += len;
 
-    base::BufferedWriter w(size);
+    base::BufferedWriter w(area->Allocate(size), size);
     w.WriteVarint32(len, nullptr);
     w.WriteVarint32(key_len, nullptr);
     w.Write(key.data(), key.size(), nullptr);
@@ -103,7 +106,7 @@ InternalKey::Pack(const base::Slice &key, const base::Slice &value) {
 /*static*/
 const char *
 InternalKey::Pack(const base::Slice &key, uint64_t tx_id, uint8_t flag,
-                  const base::Slice &value) {
+                  const base::Slice &value, util::Area *area) {
     auto key_len = static_cast<uint32_t>(key.size() + sizeof(tx_id));
     auto len = key_len + static_cast<uint32_t>(value.size());
 
@@ -111,7 +114,7 @@ InternalKey::Pack(const base::Slice &key, uint64_t tx_id, uint8_t flag,
     size += base::Varint32::Sizeof(key_len);
     size += len;
 
-    base::BufferedWriter w(size);
+    base::BufferedWriter w(area->Allocate(size), size);
     w.WriteVarint32(len, nullptr);
     w.WriteVarint32(key_len, nullptr);
     w.Write(key.data(), key.size(), nullptr);
