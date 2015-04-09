@@ -117,8 +117,7 @@ Table::Table(InternalKeyComparator comparator, size_t max_cache_size)
     , bitmap_(0)
     , cache_dummy_(nullptr)
     , cache_purge_(nullptr)
-    , max_cache_size_(max_cache_size)
-    , area_(8 * base::kKB) {
+    , max_cache_size_(max_cache_size) {
 }
 
 Table::~Table() {
@@ -129,6 +128,7 @@ Table::~Table() {
         while (purge != &cache_dummy_) {
             auto tmp = purge;
             purge = purge->next;
+            ClearPage(tmp->page.get());
             delete tmp;
         }
 
@@ -136,6 +136,7 @@ Table::~Table() {
         while (purge != &cache_purge_) {
             auto tmp = purge;
             purge = purge->next;
+            ClearPage(tmp->page.get());
             delete tmp;
         }
     }
@@ -198,7 +199,7 @@ bool Table::Put(const base::Slice &key, uint64_t tx_id, KeyFlag flag,
                 const base::Slice &value,
                 std::string *old_value) {
 
-    auto packed = InternalKey::Pack(key, tx_id, flag, value, &area_);
+    auto packed = InternalKey::Pack(key, tx_id, flag, value);
 
     const char *old = nullptr;
     auto rv = tree_->Put(packed, &old);
@@ -207,17 +208,18 @@ bool Table::Put(const base::Slice &key, uint64_t tx_id, KeyFlag flag,
             auto parsed = InternalKey::Parse(old);
             old_value->assign(parsed.value.data(), parsed.value.size());
         }
-        area_.Free(old);
+        delete[] old;
     }
     return rv;
 }
 
 bool Table::Get(const base::Slice &key, uint64_t tx_id, std::string *value) {
     Tree::Iterator iter(tree_.get());
-
-    auto packed = InternalKey::Pack(key, tx_id, kFlagFind, "", &area_);
-    iter.Seek(packed);
-    area_.Free(packed);
+    {
+        auto packed = InternalKey::Pack(key, tx_id, kFlagFind, "");
+        iter.Seek(packed);
+        delete[] packed;
+    }
 
     if (!iter.Valid()) {
         return false;
@@ -267,7 +269,7 @@ namespace {
 class TableIterator : public Iterator {
 public:
     TableIterator(Table::Tree *tree)
-        : iter_(tree) {
+        : iter_(DCHECK_NOTNULL(tree)) {
     }
 
     virtual ~TableIterator() override {}
@@ -275,9 +277,9 @@ public:
     virtual void SeekToFirst() override { iter_.SeekToFirst(); }
     virtual void SeekToLast() override { iter_.SeekToLast(); }
     virtual void Seek(const base::Slice& target) override {
-        auto packed = InternalKey::Pack(target, "", area_);
+        auto packed = InternalKey::Pack(target, "");
         iter_.Seek(packed);
-        area_->Free(packed);
+        delete[] packed;
     }
     virtual void Next() override { iter_.Next(); }
     virtual void Prev() override { iter_.Prev(); }
@@ -295,7 +297,6 @@ public:
 
 private:
     Table::Tree::Iterator iter_;
-    util::Area *area_;
 };
 
 } // namespace
@@ -649,7 +650,7 @@ Table::ReadPage(uint64_t id, Page **rv) {
             auto key = rd.ReadString();
             auto value = rd.ReadString();
 
-            auto k = InternalKey::Pack(key, value, &area_);
+            auto k = InternalKey::Pack(key, value);
             page->entries.push_back(Entry{k, 0});
         }
     } else {
@@ -657,7 +658,7 @@ Table::ReadPage(uint64_t id, Page **rv) {
             Entry entry;
 
             entry.link = rd.ReadVarint64();
-            entry.key  = InternalKey::Pack(rd.ReadString(), &area_);
+            entry.key  = InternalKey::Pack(rd.ReadString());
             page->entries.push_back(entry);
         }
     }
@@ -733,12 +734,24 @@ base::Status Table::CachedGet(uint64_t page_id, Page **rv, bool cached) {
 
             auto next = purge->next;
             Remove(purge);
+
+            ClearPage(purge->page.get());
             delete purge;
 
             purge = next;
         }
     }
     return rs;
+}
+
+void Table::FreePage(Page *page) {
+    if (page) {
+        FreeRoomForPage(page->id);
+        id_map_[page->id] = 0;
+
+        auto entry = new CacheEntry(page);
+        InsertTail(&cache_purge_, entry);
+    }
 }
 
 } // namespace balance

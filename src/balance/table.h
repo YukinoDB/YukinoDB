@@ -4,7 +4,6 @@
 #include "balance/format.h"
 #include "util/btree.h"
 #include "util/bloom_filter.h"
-#include "util/area.h"
 #include "base/ref_counted.h"
 #include "base/status.h"
 #include "base/base.h"
@@ -117,7 +116,13 @@ public:
             return owns_->AllocatePage(num_entries);
         }
 
-        void Free(const Page *page) { owns_->FreePage(page); }
+        void Free(Page *page) {
+            owns_->FreePage(page);
+        }
+
+        const char *Duplicate(const char *key) {
+            return owns_->DuplicateKey(key);
+        }
 
         Page *Get(uint64_t id, bool cached) const {
             return owns_->GetPage(id, cached);
@@ -162,10 +167,13 @@ private:
     base::Status FreeRoomForPage(uint64_t id);
 
     Page *AllocatePage(int num_entries);
-    inline void FreePage(const Page *page);
+    void FreePage(Page *page);
+    inline const char *DuplicateKey(const char *key);
     inline Page *GetPage(uint64_t id, bool cached);
 
     base::Status CachedGet(uint64_t page_id, Page **rv, bool cached);
+
+    inline void ClearPage(const Page *page) const;
 
     inline uint64_t Addr2Index(uint64_t addr);
     inline bool TestUsed(uint64_t addr);
@@ -199,7 +207,6 @@ private:
     base::FileIO *file_ = nullptr;
 
     // the area memory
-    util::Area area_;
 }; // class Table
 
 } // namespace balance

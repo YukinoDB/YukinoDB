@@ -34,19 +34,23 @@ inline void Table::ClearUsed(uint64_t addr) {
     return bitmap_.unset(static_cast<int>(i));
 }
 
-inline void Table::FreePage(const Page *page) {
-    if (page) {
-        FreeRoomForPage(page->id);
-        id_map_[page->id] = 0;
+inline void Table::ClearPage(const Page *page) const {
+    for (const auto &entry : page->entries) {
+        delete[] entry.key;
     }
-    // TODO:
-    page->Release();
 }
 
 inline Table::Page *Table::GetPage(uint64_t id, bool cached) {
     Page *page = nullptr;
     auto rs = CachedGet(id, &page, cached);
     return page;
+}
+
+inline const char *Table::DuplicateKey(const char *key) {
+    auto parsed = InternalKey::Parse(key);
+
+    // Only kept key.
+    return InternalKey::Pack(parsed.key(), "");
 }
 
 inline int Table::Comparator::operator()(const char *a, const char *b) const {

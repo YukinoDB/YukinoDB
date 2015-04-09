@@ -207,6 +207,8 @@ public:
         }
     }
 
+    Key Duplicate(const Key &key) { return key; }
+
     Page *Get(uint64_t id, bool /*cached*/) const {
         return reinterpret_cast<Page *>(id);
     }
@@ -561,7 +563,9 @@ void BTree<Key, Comparator, Allocator>::SplitLeaf(Page *page) {
     page->link = sibling->id; // leaf link
     sibling->parent = parent->id;
 
-    auto entry = parent->Put(page->back(), comparator_);
+    auto entry = parent->Put(allocator_.Duplicate(page->back().key),
+                             page->back().link,
+                             comparator_);
     parent->SetLChild(entry, page->id);
     parent->SetRChild(entry, sibling->id);
 
