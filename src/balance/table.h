@@ -91,6 +91,7 @@ public:
      */
     inline float ApproximateUsageRatio() const;
 
+    inline base::Status status() const { return status_; }
     //--------------------------------------------------------------------------
     // Testing:
     //--------------------------------------------------------------------------
@@ -142,6 +143,7 @@ public:
 
     typedef util::BTree<const char*, Comparator, Allocator> Tree;
 
+private:
     struct CacheEntry {
         CacheEntry *next;
         CacheEntry *prev;
@@ -154,7 +156,6 @@ public:
         }
     };
 
-private:
     struct PageMetadata {
         uint64_t parent;
         uint64_t addr;
@@ -182,6 +183,7 @@ private:
 
     base::Status CachedGet(uint64_t page_id, Page **rv, bool cached);
     base::Status CachedActivity(Page *page, bool cached);
+    base::Status CachedPurge();
 
     inline void ClearPage(const Page *page) const;
 
@@ -216,6 +218,7 @@ private:
     std::unique_ptr<Tree> tree_;
     base::FileIO *file_ = nullptr;
 
+    base::Status status_;
 }; // class Table
 
 } // namespace balance

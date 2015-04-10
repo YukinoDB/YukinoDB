@@ -36,19 +36,20 @@ inline void Table::ClearUsed(uint64_t addr) {
 }
 
 inline void Table::FreePage(Page *page) {
-    if (page) {
-        FreeRoomForPage(page->id);
+    DCHECK_NOTNULL(page);
 
-        id_map_.erase(page->id);
-        metadata_.erase(page->id);
+    FreeRoomForPage(page->id);
 
-        ClearPage(page);
-        page->entries.clear();
-        page->dirty = 0;
+    id_map_.erase(page->id);
+    metadata_.erase(page->id);
 
-        auto entry = new CacheEntry(page);
-        util::Dll::InsertTail(&cache_purge_, entry);
-    }
+    ClearPage(page);
+    page->entries.clear();
+    page->dirty = 0;
+
+    auto entry = new CacheEntry(page);
+    util::Dll::InsertTail(&cache_purge_, entry);
+    CachedPurge();
 }
 
 inline void Table::ClearPage(const Page *page) const {

@@ -701,6 +701,12 @@ base::Status Table::CachedActivity(Page *page, bool cached) {
         cache_size_ -= ApproximatePageSize(oldest->page.get());
     }
 
+    return CachedPurge();
+}
+
+base::Status Table::CachedPurge() {
+    base::Status rs;
+
     for (auto purge = cache_purge_.next; purge != &cache_purge_;
          purge = purge->next) {
 
@@ -710,17 +716,15 @@ base::Status Table::CachedActivity(Page *page, bool cached) {
             auto next = purge->next;
             util::Dll::Remove(purge);
 
-            //DLOG(INFO) << "clear page: " << purge->page->id;
             if (purge->page->dirty > 0) {
                 CHECK_OK(WritePage(purge->page.get()));
             }
             ClearPage(purge->page.get());
             delete purge;
-            
+
             purge = next;
         }
     }
-
     return rs;
 }
 
