@@ -22,8 +22,10 @@ namespace balance {
 
     auto rv = DCHECK_NOTNULL(delegated_)->Compare(key_a, key_b);
     if (rv == 0) {
-        auto tx_id_a = rda.ReadFixed64();
-        auto tx_id_b = rdb.ReadFixed64();
+        // High 24 bits : tx_id
+        // Low   8 bits : flag
+        auto tx_id_a = (rda.ReadFixed64() >> 8);
+        auto tx_id_b = (rdb.ReadFixed64() >> 8);
 
         if (tx_id_a > tx_id_b) {
             rv = -1;

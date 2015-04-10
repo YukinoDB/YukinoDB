@@ -217,6 +217,24 @@ bool Table::Get(const base::Slice &key, uint64_t tx_id, std::string *value) {
     }
 }
 
+bool Table::Purge(const base::Slice &key, uint64_t tx_id, std::string *value) {
+
+    auto packed = InternalKey::Pack(key, tx_id, kFlagFind, "");
+
+    const char *old = nullptr;
+    auto rv = tree_->Delete(packed, &old);
+    delete[] packed;
+
+    if (rv) {
+        if (value) {
+            auto parsed = InternalKey::Parse(old);
+            value->assign(parsed.value.data(), parsed.value.size());
+        }
+        delete[] old;
+    }
+    return rv;
+}
+
 base::Status Table::Flush(bool sync) {
     base::Status rs;
 
@@ -627,6 +645,7 @@ Table::ReadPage(uint64_t id, Page **rv) {
     uint32_t num_entries = rd.ReadVarint32();
 
     auto page = new Page(id, 16);
+    page->dirty = 0; // Readed page not dirty.
     if (type & Config::kPageLeafFlag) {
         for (auto i = 0; i < num_entries; ++i) {
             auto key = rd.ReadString();

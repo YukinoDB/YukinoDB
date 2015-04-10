@@ -52,6 +52,15 @@ public:
     bool Get(const base::Slice &key, uint64_t tx_id, std::string *value);
 
     /**
+     * In-place delete
+     *
+     * @param key key for delete.
+     * @param tx_id transaction id of key.
+     * @param value old value if exists.
+     */
+    bool Purge(const base::Slice &key, uint64_t tx_id, std::string *value);
+
+    /**
      * Flush all page to disk.
      *
      * @param sync synchronous operation.

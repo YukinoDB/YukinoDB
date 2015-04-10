@@ -95,8 +95,12 @@ inline base::Status Table::CachedGet(uint64_t page_id, Page **rv, bool cached) {
         *rv = found->second->page.get();
         return rs;
     }
+
     CHECK_OK(ReadPage(page_id, rv));
-    return CachedActivity(*rv, cached);
+
+    // Hold this page, if cached is false.
+    base::Handle<Page> hold(*rv);
+    return CachedActivity(hold.get(), cached);
 }
 
 inline int Table::Comparator::operator()(const char *a, const char *b) const {

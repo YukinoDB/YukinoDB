@@ -325,7 +325,7 @@ private:
         return allocator_.Allocate(num_entries);
     }
 
-    inline void FreePage(const Page *page) {
+    inline void FreePage(Page *page) {
         allocator_.Free(page);
     }
 

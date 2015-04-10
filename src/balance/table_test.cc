@@ -272,6 +272,23 @@ TEST_F(BtreeTableTest, LargeInsertion) {
     }
 }
 
+TEST_F(BtreeTableTest, Purging) {
+    auto rs = table_->Create(kPageSize, Config::kBtreeFileVersion, 3, &io_);
+    ASSERT_TRUE(rs.ok()) << rs.ToString();
+
+    ASSERT_FALSE(table_->Put("aaa", 0, kFlagValue, "1", nullptr));
+    ASSERT_FALSE(table_->Put("aaa", 1, kFlagDeletion, "2", nullptr));
+
+    std::string dummy;
+    EXPECT_FALSE(table_->Get("aaa", 99, &dummy));
+
+    EXPECT_TRUE(table_->Purge("aaa", 1, &dummy));
+    EXPECT_EQ("2", dummy);
+
+    EXPECT_TRUE(table_->Purge("aaa", 0, &dummy));
+    EXPECT_EQ("1", dummy);
+}
+
 } // namespace balance
 
 } // namespace yukino
