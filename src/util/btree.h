@@ -177,6 +177,8 @@ struct Page : public base::ReferenceCounted<Page<Key, Comparator>> {
     inline bool is_leaf() const {
         return entries.empty() || entries[0].link == 0;
     }
+
+    inline bool is_root() const { return parent == 0; }
     
     inline int index_of(const Entry *entry) {
         return static_cast<int>(entry - &entries[0]);
@@ -656,7 +658,14 @@ void BTree<Key, Comparator, Allocator>::RemoveLeaf(const Key &hint, Page *page) 
     parent->dirty++;
 
     if (parent->size() == 0) {
-        RemoveNonLeaf(old, parent.get());
+        if (parent == root_) {
+            root_ = link;
+            root_->parent = 0;
+            root_->dirty++;
+            FreePage(parent.get());
+        } else {
+            RemoveNonLeaf(old, parent.get());
+        }
     }
 
     FreePage(page);
@@ -733,6 +742,8 @@ void BTree<Key, Comparator, Allocator>::RemoveNonLeaf(const Entry &hint,
     if (parent->size() == 0) {
         if (parent == root_) {
             root_ = sibling;
+            root_->dirty++;
+            root_->parent = 0;
             FreePage(parent.get());
         } else {
             RemoveNonLeaf(old, parent.get());

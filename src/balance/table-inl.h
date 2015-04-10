@@ -38,7 +38,8 @@ inline void Table::ClearUsed(uint64_t addr) {
 inline void Table::FreePage(Page *page) {
     if (page) {
         FreeRoomForPage(page->id);
-        id_map_[page->id] = 0;
+
+        id_map_.erase(page->id);
         metadata_.erase(page->id);
 
         ClearPage(page);
@@ -69,6 +70,7 @@ inline const char *Table::DuplicateKey(const char *key) {
     auto parsed = InternalKey::Parse(key);
 
     // Only kept key.
+    // The non-leaf node only need key, key-value only store in leaf node.
     return InternalKey::Pack(parsed.key(), "");
 }
 
@@ -76,6 +78,8 @@ inline Table::Page *Table::AllocatePage(int num_entries) {
     auto page_id = next_page_id_++;
 
     auto page = new Page(page_id, num_entries);
+
+    // Mark this addr zero, it means: page be allocated, but not write to disk.
     id_map_[page_id] = 0;
 
     CachedActivity(page, true);

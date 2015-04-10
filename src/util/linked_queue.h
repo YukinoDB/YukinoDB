@@ -50,6 +50,10 @@ struct Dll {
         return i;
     }
 
+    template<class T> static inline T *Head(T *h) { return h->next; }
+
+    template<class T> static inline T *Tail(T *h) { return h->prev; }
+
 }; // struct Dll
 
 } // namespace util

@@ -443,6 +443,7 @@
 			isa = PBXGroup;
 			children = (
 				23F1A3F31AD511E000307CA9 /* table_test.cc */,
+				2387160E1ABD51ED00E6334F /* btree_test.cc */,
 				23AF17291ACC1D6600066178 /* log_test.cc */,
 				23AF17231ACC136F00066178 /* skiplist_test.cc */,
 				23A32A8D1ACAF8E700CAEABC /* bloom_filter_test.cc */,
@@ -458,7 +459,6 @@
 				2373CF951AA94FED0073B668 /* ref_counted_test.cc */,
 				237F99421AB1BE0E0063BF2C /* version_test.cc */,
 				2372E8C61AB2CE250028137E /* db_impl_test.cc */,
-				2387160E1ABD51ED00E6334F /* btree_test.cc */,
 				2315D6221AC84DC50022E1E9 /* format_test.cc */,
 				23AF174C1ACE41E600066178 /* block_buffer_test.cc */,
 				23F1A3F71AD60C0100307CA9 /* area_test.cc */,

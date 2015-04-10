@@ -528,6 +528,30 @@ TEST_F(BTreeTest, FuzzyPutting) {
     }
 }
 
+TEST_F(BTreeTest, SequenceDeletion) {
+    IntTree tree(3, int_comparator);
+
+    auto dummy = 0;
+    for (auto i = 0; i < 7; ++i) {
+        ASSERT_FALSE(tree.Put(i, &dummy));
+    }
+    //        [1][3]
+    // [0][1] [2][3] [4][5][6]
+    //
+    // delete: 0, 1
+    //
+    //      [3]
+    // [2][3] [4][5][6]
+    //
+    // delete: 2, 3
+    //
+    // [4][5][6]
+
+    for (auto i = 0; i < 7; ++i) {
+        ASSERT_TRUE(tree.Delete(i, &dummy)) << i;
+    }
+}
+
 } // namespace util
 
 } // namespace yukino
