@@ -60,6 +60,8 @@ public:
      */
     bool Purge(const base::Slice &key, uint64_t tx_id, std::string *value);
 
+    //bool Purge(const base::Slice &key, std::string *value);
+
     /**
      * Flush all page to disk.
      *
@@ -191,6 +193,8 @@ private:
     inline bool TestUsed(uint64_t addr);
     inline void SetUsed(uint64_t addr);
     inline void ClearUsed(uint64_t addr);
+
+    inline bool CatchError(const base::Status status);
 
     uint32_t page_size_ = 0;
     uint32_t version_ = 0;

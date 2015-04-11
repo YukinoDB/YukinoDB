@@ -269,12 +269,12 @@ Iterator* DBImpl::NewIterator(const ReadOptions& options) {
 }
 
 const Snapshot* DBImpl::GetSnapshot() {
-    std::unique_lock<std::mutex> lock;
+    std::unique_lock<std::mutex> lock(mutex_);
     return snapshots_.CreateSnapshot(versions_->last_version());
 }
 
 void DBImpl::ReleaseSnapshot(const Snapshot* snapshot) {
-    std::unique_lock<std::mutex> lock;
+    std::unique_lock<std::mutex> lock(mutex_);
     snapshots_.DeleteSnapshot(SnapshotImpl::DownCast(snapshot));
 }
 

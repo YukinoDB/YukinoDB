@@ -49,7 +49,7 @@ inline void Table::FreePage(Page *page) {
 
     auto entry = new CacheEntry(page);
     util::Dll::InsertTail(&cache_purge_, entry);
-    CachedPurge();
+    CatchError(CachedPurge());
 }
 
 inline void Table::ClearPage(const Page *page) const {
@@ -60,10 +60,7 @@ inline void Table::ClearPage(const Page *page) const {
 
 inline Table::Page *Table::GetPage(uint64_t id, bool cached) {
     Page *page = nullptr;
-    auto rs = CachedGet(id, &page, cached);
-    if (!rs.ok()) {
-        DLOG(ERROR) << rs.ToString();
-    }
+    CatchError(CachedGet(id, &page, cached));
     return page;
 }
 
@@ -83,7 +80,7 @@ inline Table::Page *Table::AllocatePage(int num_entries) {
     // Mark this addr zero, it means: page be allocated, but not write to disk.
     id_map_[page_id] = 0;
 
-    CachedActivity(page, true);
+    CatchError(CachedActivity(page, true));
     return page;
 }
 
@@ -134,6 +131,16 @@ inline float Table::ApproximateUsageRatio() const {
     }
     DCHECK_NE(0, num_used_blocks);
     return num_used_blocks / num_blocks;
+}
+
+inline bool Table::CatchError(const base::Status status) {
+    if (status_.ok() && !status.ok()) {
+        status_ = status;
+    }
+    if (!status.ok()) {
+        DLOG(ERROR) << "Error caught: " << status.ToString();
+    }
+    return status.ok();
 }
 
 namespace {

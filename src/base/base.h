@@ -172,6 +172,11 @@ inline size_t AlignDownBounds(size_t bounds, size_t value) {
     return (value + bounds - 1) & (~(bounds - 1));
 }
 
+template<class T>
+inline std::unique_ptr<T> make_unique_ptr(T *raw) {
+    return std::unique_ptr<T>(raw);
+}
+
 } // namespace base
 
 } // namespace yukinodb

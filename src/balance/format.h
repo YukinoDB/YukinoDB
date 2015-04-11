@@ -5,6 +5,7 @@
 #include "base/io-inl.h"
 #include "base/io.h"
 #include "yukino/comparator.h"
+#include <inttypes.h>
 
 namespace yukino {
 
@@ -14,9 +15,9 @@ struct Config final {
     static const size_t kBtreePageSize      = 4096;
     static const uint32_t kBtreeFileVersion = 0x00010001;
     static const uint32_t kBtreeFileMagic   = 0xa000000b;
-    static const int kBtreeOrder       = 128;
+    static const int kBtreeOrder            = 127;
 
-    static const size_t kTxIdSize      = sizeof(uint64_t);
+    static const size_t kTxIdSize = sizeof(uint64_t);
 
     static const uint8_t kPageTypeZero = 0;
     static const uint8_t kPageTypeFull = 1;
@@ -28,6 +29,9 @@ struct Config final {
     static const uint32_t kMinPageSize = 256;
 
     static const int kHoldCachedPage = 7;
+
+    static const int kCheckpointThreshold = 4 * base::kMB;
+    static const int kPurgingStepCount = 100;
 
     Config() = delete;
     ~Config() = delete;
@@ -122,6 +126,41 @@ public:
 
 private:
     const Comparator *delegated_;
+};
+
+class Files : public base::DisableCopyAssign {
+public:
+    static constexpr const char *kCurrentName  = "CURRENT";
+    static constexpr const char *kLockName     = "LOCK";
+    static constexpr const char *kDataName     = "DATA";
+    static constexpr const char *kManifestName = "MANIFEST";
+
+    Files(const std::string db_name) : db_name_(db_name) {}
+
+    std::string CurrentFile() const {
+        return base::Strings::Sprintf("%s/%s", db_name(), kCurrentName);
+    }
+
+    std::string LockFile() const {
+        return base::Strings::Sprintf("%s/%s", db_name(), kLockName);
+    }
+
+    std::string LogFile(uint64_t number) const {
+        return base::Strings::Sprintf("%s/%" PRIu64 ".log", db_name(), number);
+    }
+
+    std::string DataFile() const {
+        return base::Strings::Sprintf("%s/%s", db_name(), kDataName);
+    }
+
+    std::string ManifestFile(uint64_t number) const {
+        return base::Strings::Sprintf("%s/MANIFEST-%" PRIu64 "", db_name(), number);
+    }
+
+    const char *db_name() const { return db_name_.c_str(); }
+
+private:
+    const std::string db_name_;
 };
     
 } // namespace balance
