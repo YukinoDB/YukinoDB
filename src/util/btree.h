@@ -441,14 +441,13 @@ template<class Key, class Comparator, class Allocator>
 inline bool BTree<Key, Comparator, Allocator>::Put(const Key &key, Key *old) {
     bool is_new = false;
     auto entry = Insert(key, root_.get(), &is_new);
-    if (!is_new) {
-        *old = entry->key;
-        return true;
+    if (is_new) {
+        return false;
     }
-    if (comparator_(entry->key, key) != 0) {
-        entry->key = key;
-    }
-    return false;
+
+    *old = entry->key;
+    entry->key = key;
+    return true;
 }
 
 template<class Key, class Comparator, class Allocator>

@@ -82,6 +82,8 @@ public:
         }
     }
 
+    VersionSet *TEST_VersionSet() const { return versions_.get(); }
+
     // Then engine's name
     constexpr static const auto kName = "yukino.balance";
 

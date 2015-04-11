@@ -318,7 +318,10 @@ base::Status CreateAppendFile(const char *file_name, base::AppendFile **file) {
 base::Status CreateFileIO(const char *file_name, base::FileIO **file) {
     FileIOImpl *impl = nullptr;
 
-    auto rs = FileIOImpl::CreateFile(file_name, "w", &impl);
+    struct stat dummy;
+    bool exist = (stat(file_name, &dummy) == 0);
+
+    auto rs = FileIOImpl::CreateFile(file_name, exist ? "r+" : "w+", &impl);
     if (!rs.ok()) {
         return rs;
     }

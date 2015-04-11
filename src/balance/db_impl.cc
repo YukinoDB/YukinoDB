@@ -51,6 +51,7 @@ DBImpl::~DBImpl() {
             << " cause: " << rs.ToString();
         }
     }
+    env_->DeleteFile(files_.LockFile(), false);
 
     while (!util::Dll::Empty(&snapshot_dummy_)) {
         auto snapshot = util::Dll::Head(&snapshot_dummy_);
@@ -153,10 +154,7 @@ private:
 base::Status DBImpl::Write(const WriteOptions& options,
                            WriteBatch* updates) {
     base::Status rs;
-
-    mutex_.lock();
-    uint64_t tx_id = versions_->last_tx_id();
-    mutex_.unlock();
+    // TODO: Wait for checkpoint
 
     // Write-ahead-log fisrt:
     CHECK_OK(log_->Append(updates->buf()));
@@ -165,6 +163,7 @@ base::Status DBImpl::Write(const WriteOptions& options,
     }
 
     std::unique_lock<std::mutex> lock(mutex_);
+    uint64_t tx_id = versions_->last_tx_id();
 
     WritingHandler handler(tx_id, table_.get());
     updates->Iterate(&handler);

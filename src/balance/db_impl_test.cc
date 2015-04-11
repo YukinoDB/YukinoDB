@@ -82,6 +82,28 @@ TEST_F(BalanceDBImplTest, Checkpoint) {
     db_->TEST_WaitForCheckpoint();
 }
 
+TEST_F(BalanceDBImplTest, Recover) {
+    static const char *keys[] = {
+        "b",
+        "bb",
+        "bbb",
+        "bbbb",
+        "bbbbb",
+    };
+
+    for (auto key : keys) {
+        auto rs = db_->Put(WriteOptions(), key, "0");
+    }
+
+    delete db_;
+
+    options_.create_if_missing = false;
+
+    db_ = new DBImpl(options_, kDBName);
+    auto rs = db_->Open();
+    ASSERT_TRUE(rs.ok()) << rs.ToString();
+}
+
 } // namespace balance
 
 } // namespace yukino
