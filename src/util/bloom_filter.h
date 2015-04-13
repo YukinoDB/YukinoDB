@@ -22,7 +22,6 @@ public:
     Bitmap(int num_bits)
         : num_bits_(num_bits)
         , buckets_(capacity(num_bits), Bucket(0)) {
-        //DCHECK_GT(num_bits_, 0);
     }
 
     static inline size_t capacity(int num_bits) {

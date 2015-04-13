@@ -10,6 +10,8 @@
 		2304D8CC1AA7F703004C8251 /* env.cc in Sources */ = {isa = PBXBuildFile; fileRef = 2304D8CB1AA7F703004C8251 /* env.cc */; };
 		2304D8E41AA8335B004C8251 /* env_impl_test.cc in Sources */ = {isa = PBXBuildFile; fileRef = 2304D8E31AA8335B004C8251 /* env_impl_test.cc */; };
 		230C23B21AD90C1E00564C72 /* db_impl_test.cc in Sources */ = {isa = PBXBuildFile; fileRef = 230C23B11AD90C1E00564C72 /* db_impl_test.cc */; };
+		230C23BE1ADA537C00564C72 /* shared_ttree.cc in Sources */ = {isa = PBXBuildFile; fileRef = 230C23BD1ADA537C00564C72 /* shared_ttree.cc */; };
+		230C23C11ADB557E00564C72 /* shared_ttree_test.cc in Sources */ = {isa = PBXBuildFile; fileRef = 230C23C01ADB557E00564C72 /* shared_ttree_test.cc */; };
 		23100A0C1A1F2D1700DE06DD /* libgtest_main.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 23FE66CD1A1F206B005C7568 /* libgtest_main.a */; };
 		23100A0D1A1F2D1700DE06DD /* libgtest.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 23FE66CB1A1F206B005C7568 /* libgtest.a */; };
 		2315D6231AC84DC50022E1E9 /* format_test.cc in Sources */ = {isa = PBXBuildFile; fileRef = 2315D6221AC84DC50022E1E9 /* format_test.cc */; };
@@ -165,6 +167,10 @@
 		2304D8CB1AA7F703004C8251 /* env.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = env.cc; sourceTree = "<group>"; };
 		2304D8E31AA8335B004C8251 /* env_impl_test.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = env_impl_test.cc; path = src/port/env_impl_test.cc; sourceTree = SOURCE_ROOT; };
 		230C23B11AD90C1E00564C72 /* db_impl_test.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = db_impl_test.cc; path = src/balance/db_impl_test.cc; sourceTree = SOURCE_ROOT; };
+		230C23BC1ADA4FD100564C72 /* shared_ttree.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = shared_ttree.h; sourceTree = "<group>"; };
+		230C23BD1ADA537C00564C72 /* shared_ttree.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = shared_ttree.cc; sourceTree = "<group>"; };
+		230C23BF1ADA662700564C72 /* shared_ttree-inl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "shared_ttree-inl.h"; sourceTree = "<group>"; };
+		230C23C01ADB557E00564C72 /* shared_ttree_test.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = shared_ttree_test.cc; path = src/util/shared_ttree_test.cc; sourceTree = SOURCE_ROOT; };
 		2315D6221AC84DC50022E1E9 /* format_test.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = format_test.cc; path = src/balance/format_test.cc; sourceTree = SOURCE_ROOT; };
 		23681CB21A9F486E002721BE /* format.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = format.h; sourceTree = "<group>"; };
 		23681CB41A9F4D16002721BE /* memory_table.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = memory_table.h; sourceTree = "<group>"; };
@@ -334,6 +340,9 @@
 				23F1A3FC1AD62E9700307CA9 /* area-inl.h */,
 				23F1A3F91AD6112400307CA9 /* area.cc */,
 				23F1A3FD1AD6775300307CA9 /* linked_queue.h */,
+				230C23BC1ADA4FD100564C72 /* shared_ttree.h */,
+				230C23BF1ADA662700564C72 /* shared_ttree-inl.h */,
+				230C23BD1ADA537C00564C72 /* shared_ttree.cc */,
 			);
 			name = util;
 			path = src/util;
@@ -451,6 +460,7 @@
 		23BF0D1319A742EE0040E1CE /* unittest */ = {
 			isa = PBXGroup;
 			children = (
+				230C23C01ADB557E00564C72 /* shared_ttree_test.cc */,
 				230C23B11AD90C1E00564C72 /* db_impl_test.cc */,
 				23F1A3F31AD511E000307CA9 /* table_test.cc */,
 				2387160E1ABD51ED00E6334F /* btree_test.cc */,
@@ -651,6 +661,7 @@
 				23AF174F1ACE4B3100066178 /* block_buffer.cc in Sources */,
 				237ECB131AA9E56300EF7FB1 /* write_batch.cc in Sources */,
 				230C23B21AD90C1E00564C72 /* db_impl_test.cc in Sources */,
+				230C23C11ADB557E00564C72 /* shared_ttree_test.cc in Sources */,
 				23CD83FD1A8A09DF00D64229 /* comparator.cc in Sources */,
 				23681CB81A9F5E70002721BE /* memory_table.cc in Sources */,
 				23CD83F81A89D3FD00D64229 /* iterator.cc in Sources */,
@@ -680,6 +691,7 @@
 				23CD83DF1A834E7700D64229 /* table_builder.cc in Sources */,
 				2315D6231AC84DC50022E1E9 /* format_test.cc in Sources */,
 				238577351AD7B4D400411EC1 /* version_set.cc in Sources */,
+				230C23BE1ADA537C00564C72 /* shared_ttree.cc in Sources */,
 				23EEF9A71AA5854C0003C37C /* merger_test.cc in Sources */,
 				237ECB161AAC8AFB00EF7FB1 /* version.cc in Sources */,
 				23B694E91A82207300E711E4 /* db.cc in Sources */,

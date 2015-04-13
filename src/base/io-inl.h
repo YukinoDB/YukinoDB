@@ -162,6 +162,11 @@ inline const uint8_t *MappedMemory::buf(size_t offset) const {
     return buf_ + offset;
 }
 
+inline uint8_t *MappedMemory::mutable_buf(size_t offset) {
+    DCHECK_LE(offset, len_);
+    return buf_ + offset;
+}
+
 /*static*/
 inline MappedMemory MappedMemory::Attach(std::string *buf) {
     return Attach(&buf->at(0), buf->length());

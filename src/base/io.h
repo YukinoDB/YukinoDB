@@ -237,6 +237,9 @@ public:
     const uint8_t *buf() const { return buf(0); }
     inline const uint8_t *buf(size_t offset) const;
 
+    uint8_t *mutable_buf() { return mutable_buf(0); }
+    inline uint8_t *mutable_buf(size_t offset);
+
     const std::string &file_name() const { return file_name_; }
 
     inline static MappedMemory Attach(std::string *buf);
